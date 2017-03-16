@@ -1,0 +1,897 @@
+#include "rslib.h"
+#pragma hdrstop
+
+#ifndef TBL_NO_SQL
+
+#ifdef XP_WIN
+#include <process.h> //for getpid() for the random key generator
+#endif
+
+#include "rs/tbl_sql.h"
+
+#define SETFLAG(i,flag) (i) = (ETableStyle) ((int)i | (int)(flag))
+#define CLEARFLAG(i,flag) (i) = (ETableStyle) ((int)i & ~(int)(flag))
+
+void ODBCTable::GetConnectString(TStr& x)
+{
+ TParameterList params(Filename,';');
+ x = TStr("odbc://",params["UID"],":",params["PWD"],"@",params["DSN"],"/",name);
+}
+
+ODBCTable::ODBCTable(DBPointer &db,
+             const char * TableName,
+             const char * Query,
+             const char * Statement)
+  : DataTable(),
+    Database(db),
+    Cache(16384),
+    name(TableName),
+    Table(0)
+{
+ TableType=ETableSQL;
+
+ escapeChar = Database->escapeChar;
+ iRowCount = jColumnCount = 0;
+ originalquery = Query;
+ TempBuffer.Resize(1024);
+ SETFLAG(Style,DataTable::AllowAddRow|DataTable::AllowModify|DataTable::AllowDelRow);
+
+ if (!*name) CLEARFLAG(Style,DataTable::AllowModify); //(int)Style &= ~DataTable::AllowModify;
+ //read only
+
+ char* quotea, * quoteb;
+ GETQUOTECHAR(Database->DriverName);
+
+ if (stristr(Database->DriverName,"ACCESS"))
+ {
+ //   escapechar = 0; // doesn't have backslash-escaping
+    CLEARFLAG(Style,DataTable::HasSave);
+//   (int)Style &= ~DataTable::HasSave;
+ }
+
+ //build the query string
+
+ if (Statement)
+ {
+  Style = (ETableStyle)0;//no changes at all
+ }
+ else
+ {
+ URLDecode(originalquery);
+ TParameterList q(originalquery,'&');
+
+   FOREACH(TNameValuePair * n, q)
+     if (IsBlank(n->Value) || IsBlank(n->Name)) continue;
+
+     if (query.size()) query << " AND ";
+
+     query << quotea << n->Name << quoteb <<"="; //<< n->Value;
+     QuoteSQL(query,n->Value);
+   DONEFOREACH
+ }
+
+ if (Statement)
+   select = Statement;
+ else if (query.size())
+   select = TStr("SELECT * FROM ",name," WHERE",query);
+ else
+   select = TStr("SELECT * FROM ",name);
+
+ Filename = Database->Connect;
+
+ SetupTable();
+}
+
+ODBCTable::~ODBCTable()
+{
+ if (Style & DataTable::HasSave) //autocommit
+   Save();
+
+ Database = 0;
+ Table = 0; // delete this first, before the database.
+ Results.Data.Clear();
+}
+
+void ODBCTable::QuoteSQL(Stream& out, const char * in)
+{
+ out.write("\'",1);
+ if (!in) return;
+ while (*in)
+  {
+   if (*in == '\'')
+      {
+       out.write("\'\'",2);
+      }
+   else if (escapeChar && *in == escapeChar)
+      {
+       out.write(&escapeChar, 1);
+       out.write(&escapeChar, 1);
+      }
+   else
+      {
+       out.write(in,1);
+      }
+   in++;
+  }
+ out.write("\'",1);
+}
+
+void ODBCTable::EscapeSQL(Stream& out, const char * in)
+{
+ ::EscapeSQL(out, in, escapeChar);
+}
+
+void ODBCTable::SetupTable() //validate the size of the table
+{
+ //if the table is opened, read the keys and
+ //do our own indexing on the rows
+ iRowCount = jColumnCount = 0;
+ bool haskeys = true;
+
+ if (*name) //otherwise, it's a read-only table, and we don't care about keys.
+  {
+    if (stristr(Database->DriverName,"SYBASE") ||
+        stristr(Database->DriverName,"WATCOM") ||
+        stristr(Database->DriverName,"MICROSOFT SQL")
+         || stristr(Database->DriverName,"ADAPTIVE SERVER")
+        )
+     keydefault = "\\";
+     //assume auto-increment, don't send the key unless specified
+    else if (stristr(Database->DriverName,"ORACLE"))
+     keydefault = TStr("\\seq_",name,".nextval");
+    else if (stristr(Database->DriverName,"ACCESS"))
+    {
+      keydefault = "";
+      keys.Add("ID");
+      haskeys = false;
+    }
+    else if (stristr(Database->DriverName,"MYSQL")
+          || stristr(Database->DriverName,"POSTGRES"))
+     {
+      keydefault = "";
+//      keys.Add("ID");
+      haskeys = true;
+     }
+    else //DB2 or bastard Sybase -- don't assume autoincrement keys
+     {
+      keydefault = "";
+     }
+
+  if (haskeys)
+  {
+   STMPointer KeyList(Database->ListKeys(Database,name,LastError));
+
+   if (KeyList)
+   {
+    ODBCResultInfo KeyInfo;
+    keys.Clear();
+    KeyList->Bind(KeyInfo);
+    while (KeyList->Fetch())
+    {
+     if (name == KeyInfo.Get(3))
+       keys.Add(KeyInfo.Get(4));
+    }
+   }
+   else
+   {
+//    keys.Add("ID");
+   }
+  }
+ }
+}
+
+//load the table. If we don't know the row count, count them,
+//then set up the bindings
+bool ODBCTable::LoadTable() //allow dynamic loading
+{//we need to open the table for reading
+ if (!Table)
+   IsChanged = true;
+// Table = 0;
+ LastError = 0;
+ Table = Database->OpenTable(Database,select,LastError);
+
+// dspMessageBox("LoadTable","boo!");
+ if (!Table)
+  {
+   IsChanged = false;
+   return false;
+  }
+
+ jColumnCount = Table->ColumnCount;
+
+ Cache.columnCount = jColumnCount;
+ Cache.pageSize = 256 * jColumnCount;
+
+ if (iRowCount == 0)
+  if (Table->RowCount >= 0)
+   iRowCount = Table->RowCount;
+// else
+//  iRowCount = INT_MAX;
+ //only do this the first time. If the length changes while we're working,
+ //we won't see the changes until we reopen the database.
+
+ if (iRowCount == 0)
+  {
+   while (Table->Fetch())
+   {
+    iRowCount++;
+   }
+   if (iRowCount)
+   {
+    Table = 0; //dump the table before reloading it
+    Table = Database->OpenTable(Database,select,LastError);
+   } //else there's nothing in it!
+  }
+
+ if (!Table) return false;
+
+ Table->Bind(Results);
+ /* field missing from the table? */
+ FOREACHBACK(char* name, keys)
+   ODBCColumn * x = GetField(name);
+   if (!x) keys.Items.Destroy(i);
+ DONEFOREACH
+
+/* if (keys.Count())
+  {
+   keyi.Init(keys.Count());
+   FOREACH(const char * k,keys)
+     keyi[i]=Results.FieldNumber(k);
+   DONEFOREACH
+  }
+*/
+ return true;
+}
+
+void ODBCTable::FreeMemory()
+{
+ Cache.Flush();
+}
+
+void ODBCTable::FreeTable()
+{
+ Cache.Flush();
+ Table = NULL;
+}
+
+count_t ODBCTable::RowCount()
+{
+ if (iRowCount > 0) return iRowCount;
+
+ if (!Table) if (!LoadTable()) return false;
+ return iRowCount;
+}
+
+size_t ODBCTable::ColumnCount()
+{
+ if (jColumnCount) return jColumnCount;
+ if (!Table) if (!LoadTable()) return 0;
+ return jColumnCount;
+}
+
+const char * ODBCTable::ColumnTitle(size_t index)
+{
+ const char * x = Results.Name(index-1);
+ if (x) return x;
+ if (!Table) if (!LoadTable()) return NULL;
+ return Results.Name(index-1);
+}
+
+const char * ODBCTable::GetDataC(count_t i, size_t j)
+{
+ if (iRowCount <= 0 && !Table) if (!LoadTable()) return NULL;
+
+ if (i > iRowCount) return NULL;
+ if (j > jColumnCount) return NULL;
+
+ if (!i) return 0;
+
+ if (!j) //return the row delete flag
+  {
+   int32 row=i;
+   FOREACH(int32 x,deli)
+    if (x == row) return "Delete";
+   DONEFOREACH
+   return "";
+  }
+
+ const char * c = Cache.Get(i,j);
+ if (c != NULL) return c;
+
+ if (!Table) if (!LoadTable()) return NULL;
+
+ if (!Fetch(i)) return NULL;
+
+ c = Results.Get(j); //Table is zero-indexed!
+ if (c) Cache.Set(i,j,c);
+ return c;
+}
+
+ODBCColumn* ODBCTable::GetField(const char * name)
+{
+// if (!Table) return NULL;
+ FOREACH(ODBCColumn*x, Results.Data)
+  if (x->FieldName == name) return x;
+ DONEFOREACH;
+ return NULL;
+}
+
+ODBCColumn* ODBCTable::GetField(count_t j)
+{
+ return Results.Data[j-1];
+}
+
+EDBFieldType ODBCTable::GetColStatus(size_t i)
+{
+ if (!Table) return db_ft_Char;
+
+ ODBCColumn * x = Results.Data[i];
+ if (!x) return db_ft_Char;
+
+ switch (x->Type)
+ {
+  case SQL_DATE:
+  case SQL_TYPE_DATE:
+ // case  SQL_DATETIME:
+  return db_ft_Date;
+
+  case SQL_TIME:
+  case SQL_TIMESTAMP:
+  case SQL_TYPE_TIME:
+  case SQL_TYPE_TIMESTAMP:
+  return db_ft_Time;
+
+
+  case  SQL_BINARY:
+  case  SQL_VARBINARY:
+  case  SQL_LONGVARBINARY:
+  return db_ft_Blob;
+
+  case  SQL_BIGINT:
+  case  SQL_TINYINT:
+  case  SQL_BIT:
+//  case  SQL_GUID:
+  case  SQL_NUMERIC:
+  case  SQL_DECIMAL:
+  case  SQL_INTEGER:
+  case  SQL_SMALLINT:
+  case  SQL_FLOAT:
+  case  SQL_REAL:
+  case  SQL_DOUBLE:
+  return db_ft_Number;
+
+  case  SQL_CHAR:
+  case  SQL_VARCHAR:
+  case  SQL_LONGVARCHAR:
+  default:
+  return db_ft_Char;
+ }
+}
+
+bool ODBCTable::Fetch(count_t row)
+{ //if we can't seek back, reload the table and seek forwards.
+
+ if (Table)
+   {
+    if (Table->Fetch(row)) return true;
+    Table = 0;
+   }
+ if (LoadTable()) if (Table->Fetch(row)) return true;
+ return false;
+}
+
+bool ODBCTable::GetWhere(Stream& out,int32 row)
+{
+ if (row == 0) return false;
+
+ out << " WHERE ";
+
+ char* quotea, * quoteb;
+ GETQUOTECHAR(Database->DriverName);
+
+ bool any = true;
+ FOREACH(char*k,keys)
+   if (i) out << " AND ";
+   out << quotea << k << quoteb << "=";
+   const char * c = Cache.Get(row,Results.FieldNumber(k)+1);
+   if (!c)
+    {
+     if (!Fetch(row)) {LastError = "Row data unavailable, can't generate WHERE statement";return false;}
+     c = Results[Results.FieldNumber(k)];
+    }
+   if (!c || !*c) {LastError = "Row has a blank ID field"; return false;}
+   EscapeSQL(out, c);
+ DONEFOREACH
+ if (!any) LastError = "This table has no key fields";
+ return true;
+}
+
+bool ODBCTable::Save()
+{
+ if (!Database) return false;
+ if (!(Style & DataTable::AllowModify)) return false;
+
+ bool any = false;
+ bool fail = false;
+
+ TStringList commands;
+ FOREACH(int32& x,deli)
+  MemoryStream cmd;
+  if (doDelRow(x,cmd)) commands.Add(cmd);
+  else fail = true;
+ DONEFOREACH;
+
+ if (commands.Count())
+ {
+  FreeTable(); //start all over again!
+
+  FOREACH(char* cmd,commands)
+   any |= Database->ExecDirect(cmd,LastError);
+  DONEFOREACH;
+
+  if (any && (Style & DataTable::HasSave))
+  {
+   if (!Database->Commit())
+     Database->ExecDirect("COMMIT",LastError,false);
+  }
+
+  deli.Reset(0);
+ }
+ //Access doesn't support COMMIT. So we'll ignore error values.
+
+ IsChanged = false;
+
+ iRowCount = 0;
+
+ return !fail;
+}
+
+bool ODBCTable::SetDataC(count_t i, size_t j, const char * c)
+{
+ if (!(Style & DataTable::AllowModify)) return false;
+ if (i == 0) return false;
+ if (i > iRowCount || j > jColumnCount) return false;
+
+ if (!j) //return the row delete flag
+  {
+   if (!c) return false;
+   if (*c == 'D') { return SQLDelRow(i,true); }
+   if (*c == 0) { SQLDelRow(i,false); return true;}
+   return false; // unknown flag
+  }
+
+ if (!Results.Count()) if (!LoadTable()) return false;
+
+ ODBCColumn * x = GetField(j);
+
+ MemoryStream out;
+
+ char* quotea, * quoteb;
+ GETQUOTECHAR(Database->DriverName);
+
+ //update table set fieldname='value' where key='rowid'
+
+ out << "UPDATE " << name << " SET ";
+ out << quotea << x->FieldName <<quoteb;
+ out << "=";
+ EscapeSQL(out,c);
+
+ if (!GetWhere(out,i)) return false;
+
+ if (!Database->ExecDirect(out,LastError))
+ {
+  Table = 0; //may have to free the table right away to free the row lock.
+             //but there's no reason to clear the cache.
+  if (!Database->ExecDirect(out,LastError)) return false;
+ }
+
+ if (c) Cache.Set(i,j,c);
+ IsChanged = true;
+
+ //doesn't hurt.
+ if (!Database->Commit())
+   Database->ExecDirect("COMMIT",LastError);
+
+// if (keys.Has(x->FieldName)) FreeTable(); //reload, since keys are changed
+// FreeTable(); we'll assume that the changes will stick after the commit
+ return true;
+}
+
+bool ODBCTable::SetRow(count_t i,TNameValueList& pl)
+{
+ if (!(Style & DataTable::AllowModify)) return false;
+ if (i == 0) return AddRow(pl);
+ if (i > iRowCount) return false;
+ if (!Results.Count()) if (!LoadTable()) return false;
+
+ MemoryStream out;
+ out << "UPDATE " << name << " SET";
+
+ char* quotea, * quoteb;
+ GETQUOTECHAR(Database->DriverName);
+
+ bool any = false;
+
+ size_t iter,imax=pl.Count();
+ for (iter=0;iter<imax;iter++)
+ {
+  const char * name = pl.Name(iter);
+  const char * value = pl.Value(iter);
+
+  if (!name || !*name) continue;
+
+  if (!value) value = "";
+
+  ODBCColumn * x = GetField(name);
+  if (x)
+   {
+    if (keys.Has(name)) // you can't remove key values
+     {
+      if (!*value) continue;
+     }
+
+    if (any) out << ",";
+    any = true;
+    out << " " << quotea << x->FieldName << quoteb << "="; //fix any case sensitivity problems
+    EscapeSQL(out,value);
+   }
+ }
+
+ if (!any) return false;
+
+ if (!GetWhere(out,i)) return false;
+
+ Table = 0;
+ //apparently, Oracle Lite has a MUTEX on tables that are being browsed.
+ //but don't clear the cache
+
+ if (!Database->ExecDirect(out,LastError)) return false;
+
+ // also update the cache
+ for (iter=0;iter<imax;iter++)
+ {
+  const char * name = pl.Name(iter);
+  const char * value = pl.Value(iter);
+
+  if (!name || !*name) continue;
+
+  size_t j = FindColumn(name);
+  if (!j) continue;
+  Cache.Set(i,j,value);
+ }
+
+ IsChanged = true;
+ if (!Database->Commit())
+   Database->ExecDirect("COMMIT",LastError,false);
+
+ return true;
+}
+
+int ODBCTable::GetColWidth(size_t i)
+{
+ if (!Table) return INT_MAX;
+ ODBCColumn * c = Results.Data[i];
+ if (!c) return 0;
+ return c->FieldLength > INT_MAX ? INT_MAX : c->FieldLength;
+}
+char * itos (unsigned int value, char *p) /* radix = 32 */
+{
+    int     i,j;
+    char    c;
+
+    j=0;
+    for (i=0;value && i<34;i++)
+    {
+     c = (char)(value % 32);
+     p[j++]= (c < 10) ? c + '0' : c + 'a' - 10;
+     value = value / 32;
+    }
+    p[j]=0;
+    return p+j;
+}
+void GenerateSessionID(char* session,unsigned int i)
+{
+#ifdef XP_WIN
+  SYSTEMTIME tb;
+  unsigned int a,b,c;
+  GetSystemTime(&tb);
+
+        a  = (tb.wMonth - 1); a = a << 4;
+        a |= (tb.wDay - 1);   a = a << 5;
+        a |= (tb.wHour);      a = a << 5;
+        a |= (tb.wMinute);    a = a << 6;
+        a |= (tb.wSecond);
+
+  b = (i & 0xAA55AA55)|(a&0x55AA55AA);
+  c = (i & 0x55AA55AA)|(a&0xAA55AA55);
+  *session = 'x';
+  session = itos(tb.wYear-2000,session+1);
+  session = itos(b,session);
+  *session = 'Y';
+  session++;
+  session = itos(c,session);
+#else
+  time_t timer;
+  struct tm *tb;
+  unsigned int a,b,c;
+
+  time(&timer);
+  tb = gmtime(&timer);
+
+        a  = (tb->tm_mon);      a = a << 4;
+        a |= (tb->tm_mday - 1); a = a << 5;
+        a |= (tb->tm_hour);     a = a << 5;
+        a |= (tb->tm_min);      a = a << 6;
+        a |= (tb->tm_sec);
+
+  b = ((i) & 0xAA55AA55)|(a&0x55AA55AA);
+  c = ((i) & 0x55AA55AA)|(a&0xAA55AA55);
+  *session = 'x';
+  session = itos(tb->tm_year-100,session+1);
+  session = itos(b,session);
+  *session = 'Z';
+  session++;
+  session = itos(c,session);
+ #endif
+}
+
+void GenerateUniqueID(char* newsession,char* hash)
+{
+   unsigned int j, i = 0;
+#ifdef XP_WIN
+   HKEY key;
+#ifdef UNICODE
+   HANDLE  Mutex = CreateMutex(0,FALSE,L"EZS.CGI.RANDOM");
+#else
+   HANDLE  Mutex = CreateMutex(0,FALSE,"EZS.CGI.RANDOM");
+#endif
+   WaitForSingleObject(Mutex,20000);
+   #ifdef UNICODE
+   if (RegOpenKeyEx(HKEY_CURRENT_USER,L"SOFTWARE\\Raosoft",0,0,&key) == ERROR_SUCCESS)
+   {
+    DWORD type,length = sizeof(i);
+    RegQueryValueEx(key,L"RANDOM",0,&type,(unsigned char*)&i,&length);
+    RegCloseKey(key);
+   }
+   #else
+   if (RegOpenKeyEx(HKEY_CURRENT_USER,"SOFTWARE\\Raosoft",0,KEY_ALL_ACCESS,&key) == ERROR_SUCCESS)
+   {
+    DWORD type,length = sizeof(i);
+    RegQueryValueEx(key,"RANDOM",0,&type,(unsigned char*)&i,&length);
+    RegCloseKey(key);
+   }
+   #endif
+#endif
+   j = i >> 16;
+   if (hash) while (*hash) j += *hash++;
+   j += GetTickCount();
+
+#ifndef __WINCE__
+   i += getpid();
+#endif
+   i = (j << 16) | (i & 0x0000ffff);
+   GenerateSessionID(newsession,i);
+#ifdef XP_WIN
+   #ifdef UNICODE
+   if (RegOpenKeyEx(HKEY_CURRENT_USER,L"SOFTWARE\\Raosoft",0,0,&key) == ERROR_SUCCESS)
+   {
+    RegSetValueEx(key,L"RANDOM",0,REG_DWORD,(unsigned char*)&i,sizeof(i));
+    RegCloseKey(key);
+   }
+   #else
+   if (RegOpenKeyEx(HKEY_CURRENT_USER,"SOFTWARE\\Raosoft",0,KEY_ALL_ACCESS,&key) == ERROR_SUCCESS)
+   {
+    RegSetValueEx(key,"RANDOM",0,REG_DWORD,(unsigned char*)&i,sizeof(i));
+    RegCloseKey(key);
+   }
+   #endif
+   ReleaseMutex(Mutex);
+   CloseHandle(Mutex);
+#endif
+}
+
+count_t ODBCTable::AddRow(TNameValueList& pl)
+ {
+  if (!(Style & DataTable::AllowAddRow)) return false;
+  if (*keydefault) return SQLAddRow(pl,keydefault);
+
+
+  char tempkey[25];
+  GenerateUniqueID(tempkey,0);
+//  GetDateTime(tempkey,NULL,4);
+  return SQLAddRow(pl,tempkey);
+ }
+
+/*
+  oracle: select seq_table.currval from dual
+  to get the sequence value!
+*/
+count_t ODBCTable::SQLAddRow(TNameValueList& pl,const char * defkey)
+{
+// if (!Results.Count()) return false;
+ if (!(Style & DataTable::AllowAddRow)) return false;
+ if (!Results.Count()) if (!LoadTable()) return false;
+
+ MemoryStream out,values;
+ bool any = false;
+ bool anykey = false;
+
+ char* quotea, * quoteb;
+ GETQUOTECHAR(Database->DriverName);
+
+ out << "INSERT INTO " << name << " (";
+
+ //We need to read the table info in order to set the key.
+ //A web server could be optimized not to.
+
+ size_t i,imax = pl.Count();
+ for (i=0;i<imax;i++)
+ {
+  const char * name = pl.Name(i);
+  const char * value = pl.Value(i);
+
+  if (!name) name = "";
+  if (!value) value = "";
+
+  bool IsKey = keys.Has(name);
+  if (IsKey) anykey = true;
+
+  ODBCColumn * x = GetField(name);
+  if (x)
+    {
+     if (x->AutoIncrement) continue; //don't set autoincrement fields
+     if (IsKey && !strcasecmp(value," ")) continue;
+
+     if (any)
+      {
+       out << ",";
+       values << ",";
+      }
+     else any = true; //print commas next time
+
+     out <<quotea << x->FieldName<<quoteb;
+
+ //if we're accessing an autoincrement instruction, don't quote the
+ //SQL code. Use backslash as an escape code
+
+     if (IsKey && !*value )
+     {
+      if (defkey[0] == '\\') values << (defkey + 1);
+      else QuoteSQL(values,defkey);
+     }
+     else
+       EscapeSQL(values,value);
+    }
+ }
+
+ if (!any) return 0;
+ if (!anykey)
+  {
+   if (keys.Count()) //no keys found, but we need one!
+   {//up-oh! we need to make up a key value.
+    FOREACH(const char*c,keys)
+     ODBCColumn * x = GetField(c);
+     if (x) if (x->AutoIncrement) continue;
+
+     out << ",";
+     out << quotea <<c << quoteb; //make up something for each key field
+    DONEFOREACH
+   }
+  else anykey = true; //don't need any keys.
+ }
+
+ out << ") VALUES (";
+ values.rewind();
+ out.Append(values);
+
+ if (!anykey)
+  {
+   FOREACH(const char*c,keys)
+    ODBCColumn * x = GetField(c);
+    if (x) if (x->AutoIncrement) continue;
+
+    if (defkey[0] == '\\') out << "," << (defkey+1);
+    else out << ",\'" << defkey << "\'";
+   DONEFOREACH
+  }
+
+ out << ")";
+
+ FreeTable();
+ //apparently, Oracle Lite has a MUTEX on tables that are being browsed.
+
+ if (!Database->ExecDirect(out,LastError))
+  {
+//   dspMessageBox(out,LastError);
+   return 0;
+  }
+
+ iRowCount ++;
+
+ IsChanged = true;
+ if (!Database->Commit())
+   Database->ExecDirect("COMMIT",LastError,false);
+ //FreeTable();      //table has changed
+ //don't free the table immediately, because this may be part of a bulk operation
+ //and we need to keep the table headers around!
+ return NOT_FOUND; //don't know what row number we added
+}
+
+bool ODBCTable::GetRow(count_t i,TNameValueList& pl)
+{
+ if (!Table) if (!LoadTable()) return false;
+
+ if (i == 0) //retrieve the fielnames
+  {
+   FOREACH(ODBCColumn*x,Results.Data)
+    pl.Set(x->FieldName,"");
+   DONEFOREACH
+   return true;
+  }
+
+ if (!Fetch(i))  return false;
+
+ FOREACH(ODBCColumn*x,Results.Data)
+    pl.Set(x->FieldName,x->sData);
+ DONEFOREACH
+ return true;
+}
+
+bool ODBCTable::SQLDelRow(count_t p,bool del)
+{//mark for deletion, delete on exit
+ if (!(Style & DataTable::AllowDelRow)) return false;
+
+ IsChanged = true;
+
+
+ //undelete
+ if (del == false)
+ {
+  FOREACH(int32& x,deli)
+   if (x == (int32)p) { x = 0; return true;}
+  DONEFOREACH
+  return false;
+ }
+ else
+ {
+  //use blank spaces
+  FOREACH(int32& x,deli)
+   if (x == 0) {x = (int32)p; return true;}
+  DONEFOREACH
+
+  deli.Add((int32)p);
+  return true;
+ }
+}
+
+bool ODBCTable::doDelRow(count_t i,Stream& out)
+{//don't go around calling this indiscriminately!
+ out << "DELETE FROM " << name;
+
+ if (!GetWhere(out,i)) return false;
+ return true;
+}
+
+#endif
+
+
+/* misc. SQL commands:
+
+//note : this erases existing databases. Careful!
+CREATE DATABASE <database>
+ AUTOEXTEND ON -- oracle
+
+//create a table
+CREATE TABLE <schema.table>
+(id VARCHAR2(20) CONSTRAIN pk_id PRIMARY KEY,
+ <fieldname> <fieldtype> DEFAULT <def> CONSTRAINT <constraint>,
+  ...)
+
+// add fields
+ALTER TABLE <schema.table>
+ADD (<fieldname> <datatype> DEFAULT <def>, ...)
+MODIFY (<fieldname> <datatype> DEFAULT <def>, ...)
+
+
+*/
+

@@ -1,0 +1,445 @@
+<project name=JSDB version=20091106 platform=win32 >
+	<mode name=release>
+		<define>FEATURE_NANOJIT</define>
+		<define>JS_TRACER</define>
+		<define platform=win32,winbcc>WIN32_LEAN_AND_MEAN=1</define>
+		<define platfomr=osx,sun>JS_HAVE_STDINT_H</define>
+		<define>NO_NOTES_MAIL</define>
+		<define>NO_CMC_MAIL</define>
+		<define>NO_DBF_ENCRYPTION</define>
+	</mode>
+	<mode name=debug>
+		<define>FEATURE_NANOJIT</define>
+		<define>JS_TRACER</define>
+		<define platform=win32,winbcc>WIN32_LEAN_AND_MEAN=1</define>
+		<define platfomr=osx,sun>JS_HAVE_STDINT_H</define>
+		<define>NO_NOTES_MAIL</define>
+		<define>NO_CMC_MAIL</define>
+		<define>NO_DBF_ENCRYPTION</define>
+	</mode>
+	<platform name=linux>
+		<define>XP_UNIX</define>
+		<define>HAVE_TERMIO</define>
+		<configure>#!/bin/sh</configure>
+		<compile output='.o' name=gcc path=gcc parameters="$options -o$intermediate$output $input; echo $input;">
+			<template name=include>-idirafter $value </template>
+	  		<template name=define>-D $value </template>
+			<options>-c -I . $include $define </options>
+			<options mode=debug> -g </options>
+		</compile>
+		<compile input='.cpp' output='.o' name=g++ path=g++ parameters="$options -o$intermediate$output $input; echo $input;">
+			<template name=include>-idirafter $value </template>
+	  		<template name=define>-D $value </template>
+			<options>-c -fexceptions -I . $include $define -Wno-invalid-offsetof</options>
+			<options mode=debug> -g </options>
+		</compile>
+		<link name=g++ resolve=1 path=g++ parameters="$options -o $output $input $libraries $deffile " >
+			<template name=library>-l$value </template>
+			<options mode=debug> -g </options>
+			<options mode=release> -s </options>
+		</link> 		
+	</platform>
+	<platform name=osx>
+		<define>XP_MACOSX</define>
+		<define>XP_UNIX</define>
+		<configure>#!/bin/sh</configure>
+		<compile output='.o' name=gcc path=gcc parameters="$options -o$intermediate$output $input; echo $input;">
+			<template name=include>-idirafter $value </template>
+	  		<template name=define>-D $value </template>
+			<options>-m32 -c -I . $include $define </options>
+			<options mode=debug> -g </options>
+		</compile>
+		<compile input='.cpp' output='.o' name=g++ path=g++ parameters="$options -o$intermediate$output $input; echo $input;">
+			<template name=include>-idirafter $value </template>
+	  		<template name=define>-D $value </template>
+			<options>-m32 -c -fexceptions -I . $include $define -Wno-invalid-offsetof</options>
+			<options mode=debug> -g </options>
+		</compile>
+		<link mode=release name=g++ resolve=1 path=g++ parameters="$options -o $output $input $libraries $deffile" >
+			<template name=library>-l$value </template>
+			<options>-m32 </options>
+			<options mode=debug> -g </options>
+			<options mode=release> </options>
+		</link> 		
+		<link mode=debug name=g++ resolve=1 path=g++ parameters="$options -o $output $input $libraries $deffile " >
+			<template name=library>-l$value </template>
+			<options>-m32 </options>
+			<options mode=debug> -g </options>
+			<options mode=release> </options>
+		</link> 		
+	</platform>
+	<platform name=sun comment="slightly different from osx">
+		<define>JS_HAVE_LONG_LONG</define>
+		<define>XP_UNIX</define>
+		<define>HAVE_SYS_INTTYPES_H</define>
+		<configure>#!/bin/sh</configure>
+		<compile output='.o' name=gcc path=gcc parameters="$options -o $intermediate$output $input; echo $input;">
+			<template name=include>-idirafter $value </template>
+	  		<template name=define>-D $value </template>
+			<options>-c -I . $include $define </options>
+			<options mode=debug> -g </options>
+		</compile>
+		<compile input='.cpp' output='.o' name=g++ path=g++ parameters="$options -o $intermediate$output $input; echo $input;">
+			<template name=include>-idirafter $value </template>
+	  		<template name=define>-D $value </template>
+			<options>-c -fexceptions -I . $include $define -Wno-invalid-offsetof -Wno-conversion-null</options>
+			<options mode=debug> -g </options>
+		</compile>
+		<link mode=release name=g++ resolve=1 path=g++ parameters="$options -o $output $input $libraries $deffile" >
+			<template name=library>-l$value </template>
+			<options mode=debug> -g </options>
+			<options mode=release> </options>
+		</link> 		
+		<link mode=debug name=g++ resolve=1 path=g++ parameters="$options -o $output $input $libraries $deffile " >
+			<template name=library>-l$value </template>
+			<options mode=debug> -g </options>
+			<options mode=release> </options>
+		</link> 		
+	</platform>
+  	<platform name=win32>
+		<define>XP_WIN</define>
+		<define>_Windows</define> 
+		<compile output='.o' name=gcc path=gcc.exe parameters="$options -o$intermediate$output $input">
+			<template name=include>-idirafter $value </template>
+			<template name=define>-D $value </template>
+			<options>-c -fexceptions -I . $include $define </options>
+			<options mode=debug>-g </options>
+			<options mode=release>-O2 -Os </options>
+		</compile>
+		<compile input='.cpp' output='.o' name=g++ path=g++.exe parameters="$options -o$intermediate$output $input">
+			<template name=include>-idirafter $value </template>
+			<template name=define>-D $value </template>
+			<options>-c -fexceptions -I . $include $define -Wno-invalid-offsetof -Wno-conversion-null</options>
+			<options mode=debug>-g </options>
+			<options mode=release>-O2 -Os </options>
+		</compile>
+		<compile input='.rc' output='.coff' name=windres path=windres.exe parameters="-o $intermediate$output $input ">
+		</compile>
+		<compile input='.def' output='.a' name=dlltool path=dlltool.exe parameters="--output-lib $intermediate$output --def $input ">
+		</compile>
+		<link name=gcc resolve=1 path=gcc.exe parameters="$options -o $output -mconsole -mwindows -mole $input $resource $libraries $deffile " >
+			<template name=library>-l$value </template>
+			<options mode=debug>-g</options>
+			<options mode=release>-static -s</options>
+		</link> 		
+	</platform>
+	<platform name=winbcc>
+		<define>XP_WIN</define>
+		<define>winbcc</define>
+		<define>__winbcc__</define> 
+		<compile input='.c' output='.obj' name=bcc path=bcc32.exe parameters="$options $input -o$output">
+	  		<template name=include>$value;</template>
+	  		<template name=define>$value;</template>
+			<options>-D$define -I"c:\program files\bcc55\include;$include;." -n$intermediate -5 -a4 -c -d -ff -H -Jgd -O1 -pr -Q -RT -WC</options>
+			<options mode=release>-H=release.csm</options>
+			<options mode=debug>-H=debug.csm -v -vi -y</options>			
+		</compile>
+		<compile input='.cpp' output='.obj' name=bcc path=bcc32.exe parameters="$options $input -o$output">
+			<template name=include>$value;</template>
+			<template name=define>$value;</template>
+			<options>-D$define -I"c:\program files\bcc55\include;$include;." -n$intermediate -5 -a4 -c -d -ff -H -Jgd -O1 -pr -Q -RT -WC</options>
+			<options mode=release>-H=release.csm</options>
+			<options mode=debug>-H=debug.csm -v -vi -y -N</options>
+			<define mode=debug>DEBUG</define>
+		</compile>
+		<compile input='.rc' output='.res' name=brc path=brc32.exe parameters="-fo $intermediate$output $input ">
+		</compile>
+		<link name=ilink resolve=0 path=ilink32.exe parameters="$options C0X32 $input,$output,$mapfile,IMPORT32 CW32MT,$deffile,$resource " >
+			<options>/L"c:\program files\bcc55\lib" /j$intermediate /ap /c /q /Tpe /Gz</options>
+			<options mode=debug>-v</options>
+	  		<template name=library>$value;</template>
+		</link> 		
+	</platform>
+	<macro name=compile platform=osx>g++ -m32 $in -o $out</macro>
+	<macro name=compile platform=winvc>cl $in -Fe$out</macro>
+	<macro name=compile>g++ $in -o $out</macro>
+	<macro name=exec platform=win32>$in > js\$out</macro>
+	<macro name=exec>./$in > js/$out</macro>
+	<macro name=exec2 platform=win32>$in js\$out</macro>
+	<macro name=exec2>./$in js/$out</macro>
+
+	<configure macro=compile in=js/src/jskwgen.cpp out=jsdbconfig1.exe />
+	<configure macro=exec in=jsdbconfig1.exe out=jsautokw.h />
+	
+	<configure macro=compile in=js/src/jscpucfg.cpp out=jsdbconfig2.exe />
+	<configure macro=exec in=jsdbconfig2.exe out=jsautocfg.h />
+	
+	<configure macro=compile in=js/src/jsoplengen.cpp out=jsdbconfig3.exe />
+	<configure macro=exec2 in=jsdbconfig3.exe out=jsautooplen.h />
+	
+	<configure macro=compile in=jsdbconfigure.cpp out=jsdbconfig4.exe />
+	<configure macro=exec in=jsdbconfig4.exe out=js-config.h />
+
+	<configure platform=osx>cp jsdb.cpp rs/jsdb.cpp</configure>
+
+	<finish platform=osx mode=release>strip jsdb</finish>
+	<target platform=win32 name="wingcc" output="jsdb.exe" libraries="ole32;ws2_32;stdc++;odbc32;oleaut32;mapi32;comdlg32;uuid;winmm" intermediate="obj\">
+		<group>winmain</group>
+		<group>SpiderMonkey</group>
+		<group>Wrappers</group>
+		<group>Raosoft</group>
+		<group>ZLib</group>
+		<group>SQLite</group>
+	</target>
+	<target platform=wintest name="wingcc" output="test.exe" libraries="ole32;ws2_32;stdc++;odbc32;oleaut32;mapi32;comdlg32;uuid;winmm" intermediate="obj\">
+		<file>test.cpp</file>
+		<group>Raosoft</group>
+		<group>ZLib</group>		
+	</target>
+	<target platform=winminimal name="winminimal" output="jsdb.exe" mapfile="jsdb.map" deffile="jsdb.def" intermediate="obj/">
+		<define>JSDB_MINIMAL</define>
+		<define>TBL_NO_SQLITE</define>
+		<group>winmain</group>
+		<group>SpiderMonkey</group>
+		<group>BaseWrappers</group>
+		<group>Raosoft</group>
+	</target>
+	<target platform=winbcc name="winbcc" output="jsdb.exe" mapfile="jsdb.map" deffile="jsdb.def" intermediate="obj\">
+		<group>winmain</group>
+		<group>Wrappers</group>
+		<group>Raosoft</group>
+		<group>ZLib</group>
+		<group>SpiderMonkey</group>
+		<group>SQLite</group>
+	</target>
+	<target platform=linux name="linux" output="jsdb" libraries="m;odbc;pthread" intermediate="obj/">
+		<group>main</group>
+		<group>Wrappers</group>
+		<group>Raosoft</group>
+		<group>ZLib</group>
+		<group>SpiderMonkey</group>
+		<group>editline</group>
+		<group>SQLite</group>
+	</target>
+	<target platform=linux name="linuxiodbc" output="jsdb" libraries="m;iodbc;pthread" intermediate="obj/">
+		<group>main</group>
+		<group>Wrappers</group>
+		<group>Raosoft</group>
+		<group>ZLib</group>
+		<group>SpiderMonkey</group>
+		<group>editline</group>
+		<group>SQLite</group>
+	</target>
+	<target platform=linux name="linuxnosql" output="jsdb" libraries="m;pthread" intermediate="obj/">
+		<define>TBL_NO_SQL</define>
+		<group>main</group>
+		<group>Wrappers</group>
+		<group>Raosoft</group>
+		<group>ZLib</group>
+		<group>SpiderMonkey</group>
+		<group>editline</group>
+		<group>SQLite</group>
+	</target>
+	<target platform=osx name="osx" output="jsdb" options="-mmacosx-version-min=10.4" libraries="m;iodbc;pthread" intermediate="obj/">
+		<group>osxmain</group>
+		<group>Wrappers</group>
+		<group>Raosoft</group>
+		<group>ZLib</group>
+		<group>SpiderMonkey</group>
+		<group>editline</group>
+		<group>SQLite</group>
+	</target>
+	<target platform=sun name="sun" output="jsdb" libraries="m;nsl;socket;pthread" intermediate="obj/">
+		<define>TBL_NO_SQL</define>
+		<group>main</group>
+		<group>Wrappers</group>
+		<group>Raosoft</group>
+		<group>ZLib</group>
+		<group>SpiderMonkey</group>
+		<group>editline</group>
+		<group>SQLite</group>
+	</target>
+	<group name=osxmain include="js/src/;js/;rs/" path="rs/">
+		<file>jsdb.cpp</file>
+	</group>
+	<group name=main include="js/src/;js/;rs/">
+		<file>jsdb.cpp</file>
+	</group>
+	<group name=winmain include="js/src/;js/;rs/">
+		<file>jsdb.cpp</file>
+		<file>jsdb.rc</file>
+	</group>
+	<group name=ZLib path="zlib/">
+		<file>adler32.c</file>
+		<file>trees.c</file>
+		<file>zutil.c</file>
+		<file>deflate.c</file>
+		<file>infblock.c</file>
+		<file>infcodes.c</file>
+		<file>inffast.c</file>
+		<file>inflate.c</file>
+		<file>inftrees.c</file>
+		<file>infutil.c</file>
+	</group>
+	<group name="SQLite" path="sqlite/" include="">
+		<define>SQLITE_OMIT_LOAD_EXTENSION</define>
+		<define>SQLITE_OMIT_AUTHORIZATION</define>
+		<define>SQLITE_OMIT_COMPLETE</define>
+		<define>SQLITE_OMIT_PROGRESS_CALLBACK</define>		
+		<file>sqlite3.c</file>
+	</group>
+	<group name=SpiderMonkey version=1.8 path="js/src/" include="js/src/;js/">
+		<define platform=winbcc>EXPORT_JS_API</define>
+		<define platform=winbcc>_declspec=__declspec</define> 
+		<define platform="win32">AVMPLUS_WIN32=1</define>
+		<define platform="win32,linux,osx">AVMPLUS_IA32=1</define>		
+		<define platform="sun,osx">AVMPLUS_UNIX=1</define>
+		<define platform="sun">AVMPLUS_SPARC=1</define>		
+		<define platform="linux">AVMPLUS_LINUX=1</define>		
+		<file>jsapi.cpp</file>
+		<file>jsarena.cpp</file>
+		<file>jsbuiltins.cpp</file>
+		<file>jsarray.cpp</file>
+		<file>jsatom.cpp</file>
+		<file>jsbool.cpp</file>
+		<file>jscntxt.cpp</file>
+		<file>jsdate.cpp</file>
+		<file>jsdbgapi.cpp</file>
+		<file>jsdhash.cpp</file>
+		<file>jsdtoa.cpp</file>
+		<file>jsemit.cpp</file>
+		<file>jsexn.cpp</file>
+		<file>jsfun.cpp</file>
+		<file>jstracer.cpp</file>
+		<file>jsgc.cpp</file>
+		<file>jshash.cpp</file>
+		<file>jsinterp.cpp</file>
+		<file>jsinvoke.cpp</file>
+		<file>jsiter.cpp</file>
+		<file>jslock.cpp</file>
+		<file>jslog2.cpp</file>
+		<file>jsmath.cpp</file>
+		<file>jsnum.cpp</file>
+		<file>jsobj.cpp</file>
+		<file>json.cpp</file>
+		<file>jsopcode.cpp</file>
+		<file>jsparse.cpp</file>
+		<file>jsprf.cpp</file>
+		<file>jsregexp.cpp</file>
+		<file>jsscan.cpp</file>
+		<file>jsscope.cpp</file>
+		<file>jsscript.cpp</file>
+		<file>jsstr.cpp</file>
+		<file>jsutil.cpp</file>
+		<file>jsxdrapi.cpp</file>
+		<file>jsxml.cpp</file>
+		<file>prmjtime.cpp</file>
+		<file>nanojit/Assembler.cpp</file>
+		<file>nanojit/avmplus.cpp</file>
+		<file>nanojit/Fragmento.cpp</file>
+		<file>nanojit/LIR.cpp</file>
+		<file>nanojit/CodeAlloc.cpp</file>
+		<file>nanojit/Containers.cpp</file>
+		<file>nanojit/Allocator.cpp</file>
+		<file platform=arm>nanojit/NativeARM.cpp</file>
+		<file platform=win32,linux,osx>nanojit/Nativei386.cpp</file>
+		<file platform=ppc>nanojit/NativePPC.cpp</file>
+		<file platform=sun>nanojit/NativeSparc.cpp</file>
+		<file platform=none>nanojit/NativeX64.cpp</file>
+		<file>nanojit/RegAlloc.cpp</file>
+	</group>
+	<group name="BaseWrappers" path="rs/" include="js/src/;js/">
+		<define platform=winbcc>EXPORT_JS_API</define>
+		<define platform=winbcc>_declspec=__declspec</define> 
+		<file>wrap_env.cpp</file>
+		<file>wrap_shell.cpp</file>
+		<file>wrap_system.cpp</file>
+		<file>wrap_stream.cpp</file>
+		<file>wrap_record.cpp</file>
+	</group>
+	<group name="Wrappers" path="rs/" include="js/src/;js/">
+		<define platform=winbcc>EXPORT_JS_API</define>
+		<define platform=winbcc>_declspec=__declspec</define> 
+		<file>wrap_sqlite.cpp</file>
+		<file>wrap_process.cpp</file>
+		<file>wrap_com.cpp</file>
+		<file>wrap_debug.cpp</file>
+		<file>wrap_env.cpp</file>
+		<file>wrap_nums.cpp</file>
+		<file>wrap_image.cpp</file>
+		<file>wrap_index.cpp</file>
+		<file>wrap_mail.cpp</file>
+		<file>wrap_odbc.cpp</file>
+		<file>wrap_record.cpp</file>
+		<file>wrap_server.cpp</file>
+		<file>wrap_shell.cpp</file>
+		<file>wrap_system.cpp</file>
+		<file>wrap_stream.cpp</file>
+		<file>wrap_table.cpp</file>
+		<file>wrap_zip.cpp</file>
+	</group>
+	<group name="editline" path="js/src/editline/" >
+		<define>JSFILE</define>
+		<define>ANSI_ARROWS</define>
+		<define>HAVE_TCGETATTR</define>
+		<define>HIDE</define>
+		<define>USE_DIRENT</define>
+		<define>SYS_UNIX</define>
+		<define>HAVE_STDLIB</define>
+		<define>UNIQUE_HISTORY</define>
+		<file>editline.c</file>
+		<file>sysunix.c</file>
+	</group>
+	<group name="Raosoft" path="rs/" >
+		<file>dbf_cache.cpp</file>
+		<file>dbf_dat.cpp</file>
+		<file>dbf_file.cpp</file>
+		<file>dbf_head.cpp</file>
+		<file>dbf_io.cpp</file>
+		<file>dbf_open.cpp</file>
+		<file>dbf_rec.cpp</file>
+		<file require=ezsurvey>ezf_form.cpp</file>
+		<file require=ezsurvey>ezf_read.cpp</file>
+		<file require=ezsurvey>ezf_writ.cpp</file>
+		<file>gif_font.cpp</file>
+		<file>gif_main.cpp</file>	
+		<file>io_b64.cpp</file>
+		<file>io_comm.cpp</file>
+		<file>io_compress.cpp</file>
+		<file>io_expand.cpp</file>
+		<file require=ezsurvey>io_ezf.cpp</file>
+		<file>io_file.cpp</file>
+		<file>io_inet.cpp</file>
+		<file>io_list.cpp</file>
+		<file>io_memory.cpp</file>
+		<file>io_fifo.cpp</file>
+		<file>io_open.cpp</file>
+		<file>io_pipe.cpp</file>
+		<file>io_print.cpp</file>
+		<file>io_stream.cpp</file>
+		<file>io_xml.cpp</file>
+		<file>io_zip.cpp</file>
+		<file>ml_list.cpp</file>
+		<file>ml_mapi.cpp</file>
+		<file>ml_mapi2.cpp</file>
+		<file>ml_mime.cpp</file>
+		<file>ml_notes.cpp</file>
+		<file>ml_open.cpp</file>
+		<file>ml_pop.cpp</file>
+		<file>ml_vim.cpp</file>
+		<file>sy_alloc.cpp</file>
+		<file>sy_char.cpp</file>
+		<file>sy_crc.cpp</file>
+		<file>sy_except.cpp</file>
+		<file>sy_file.cpp</file>
+		<file>sy_form.cpp</file>
+		<file>sy_int32.cpp</file>
+		<file>sy_list.cpp</file>
+		<file>sy_mswin.cpp</file>
+		<file>sy_param.cpp</file>
+		<file>sy_sort.cpp</file>
+		<file>sy_sql.cpp</file>
+		<file>sy_string.cpp</file>
+		<file>sy_strlist.cpp</file>
+		<file>sy_time.cpp</file>
+		<file>sy_url.cpp</file>
+		<file>sy_worm.cpp</file>
+		<file>tbl_asci.cpp</file>
+		<file>tbl_cache.cpp</file>
+		<file>tbl_data.cpp</file>
+		<file>tbl_dbf.cpp</file>
+		<file>tbl_index.cpp</file>
+		<file>tbl_main.cpp</file>
+		<file>tbl_sql.cpp</file>
+	</group>
+</project>

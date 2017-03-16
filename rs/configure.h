@@ -1,0 +1,2 @@
+#define RS_BYTES_PER_LONG 4
+#define RS_BYTES_PER_INT 4

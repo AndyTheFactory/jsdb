@@ -1,0 +1,215 @@
+// For MSC, change the precompiled header mode to automatic (/YX)
+#if defined(_WIN32) && (defined(_MSC_VER) || defined(__MSVC__))
+#ifndef XP_WIN
+#define XP_WIN
+#endif
+#ifndef __MSC__
+#define __MSC__
+#endif
+#endif
+
+#if defined( __MWERKS__ ) /* probably win32 or macintosh */
+ #ifdef _Windows
+  #define XP_WIN
+  #undef __MSC__
+ #endif
+ #ifdef macintosh
+  #define XP_MAC
+ #endif
+#endif
+
+#if defined(__WIN32__) || defined (__WIN64__) || defined(WIN32) || defined(WIN64) || defined(_Windows)
+ #ifndef XP_WIN
+  #define XP_WIN
+ #endif
+#endif
+
+#ifdef __MSC__
+  #define MAXPATH 1024
+#endif
+
+#ifdef __GNUC__
+  #define MAXPATH 1024
+  #define _HAVE_STDINT_H
+#endif
+
+#ifdef __MWERKS__
+  #define MAXPATH 1024
+#endif
+
+#define __import
+#define __far
+#if !defined(FAR) && !defined(__MSC__)
+  #define FAR far
+#endif
+
+#define NOT_FOUND ((size_t)-1) //ULONG_MAX
+#define NO_COUNT ULONG_MAX
+
+/* Microsoft VC */
+#if defined(__MSVC__) || defined(__MSC__)
+  #define strncasecmp strnicmp
+  #define strcasecmp stricmp
+#endif
+
+#if defined (XP_WIN) && defined(__MSC__) && !defined(__MWERKS__)
+  #pragma warning (disable: 4800 )
+  #pragma warning (disable: 4068 )
+  #if _MSC_VER >= 1000
+  #pragma once
+  #endif
+  #define VC_EXTRALEAN
+  #include <windows.h>
+  #include <winnt.h>
+  #include <winbase.h>
+  #include <direct.h>
+  #include <sys/types.h>
+  #include <sys/stat.h>
+  #include <new.h>
+
+  #if _MSC_VER >= 1200 /* MSVC version 6 */
+   #define _HAS_INT64
+  #endif
+#endif
+
+/* CodeWarrior for Windows */
+#if defined(__MWERKS__) && defined(XP_WIN)
+  #include <size_t.h>
+  #include <null.h>
+  #include <windows.h>
+  #include <winnt.h>
+  #include <winbase.h>
+  #include <direct.h>
+#endif
+
+#ifdef __MWERKS__
+#define random(x) (rand() % x)
+#define strncasecmp strnicmp
+#define strcasecmp stricmp
+#define FRIEND friend class
+#endif
+
+/* Borland C++ */
+#if defined(__BORLANDC__) && defined (XP_WIN)
+/* we don't trust strcmp or stricmp */
+  #if (__BORLANDC__ < 0x550)
+    #include <winsys/defs.h>
+    #include <services/wsysinc.h>
+  #endif
+  #include <windows.h>
+  #include <winbase.h>
+  #include <winnt.h>
+  #if (__BORLANDC__ < 0x550)
+    #include <services/memory.h>
+  #endif
+  #include <fcntl.h>
+  #include <sys/stat.h>
+  #define strncasecmp strnicmp
+  #define strcasecmp stricmp
+  #if defined (_INTEGRAL_MAX_BITS) && (_INTEGRAL_MAX_BITS >= 64)
+    #define _HAS_INT64
+  #endif
+#endif
+
+#ifdef __GNUC__
+#ifdef XP_WIN
+  #include <windows.h>
+  #include <winbase.h>
+  #include <winnt.h>
+  #include <objbase.h>
+  #define strncasecmp strnicmp
+  #define strcasecmp stricmp
+#endif
+  #include <fcntl.h>
+  #include <sys/stat.h>
+  #define FRIEND friend class
+#endif
+
+#ifndef FRIEND
+  #define FRIEND friend
+#endif
+
+#if !defined(XP_WIN) && !defined(XP_MAC) && !defined(XP_UNIX)
+#define XP_UNIX
+#endif
+
+#if 0
+// FOr some reason, jsotypes.h has "typedef unsingned int uint32" for _WIN32, so we do that below.
+def _HAVE_STDINT_H
+#include <jsstdint.h>
+typedef int8_t int8;
+typedef int16_t int16;
+typedef int32_t int32;
+typedef int64_t int64;
+typedef uint8_t uint8;
+typedef uint16_t uint16;
+typedef uint32_t uint32;
+typedef uint64_t uint64;
+#else
+/*int64 */
+/*  echo | g++ -dM -E - */
+#if __LONG_MAX__ == 9223372036854775807L
+/* 64-bit pointers -- sizeof(void*) == sizeof(long) */
+ #define _HAS_INT64
+#if defined(JS_HAVE_STDINT_H)
+#include <stdint.h>
+typedef int64_t  int64;
+typedef uint64_t  uint64;
+#elif defined(JS_HAVE___INTN)
+typedef __int64 int64;
+typedef __uint64 uint64;
+#else
+ typedef long int int64;
+ typedef long unsigned int uint64;
+#endif
+#elif defined(XP_WIN) && !defined(__GNUC__)
+/* compiler provides an __int64 type */
+ #define _HAS_INT64
+ typedef unsigned __int64 uint64;
+ typedef __int64 int64;
+#elif __LONG_LONG_MAX__ == 9223372036854775807L
+/* 64-bit long long, 32 or shorter pointers, */
+ #define _HAS_INT64
+ typedef long long int64;
+ typedef unsigned long long uint64;
+#else
+/* no int64 */
+#endif
+
+/* int32 */
+
+#if defined(_WIN32)
+typedef int int32;
+typedef unsigned uint32;
+#elif __INT_MAX__ == 2147483647
+typedef signed int int32;
+typedef unsigned int uint32;
+#elif __LONG_MAX__ == 2147483647
+typedef signed long int32;
+typedef unsigned long uint32;
+#else
+typedef signed int int32;
+typedef unsigned int uint32;
+#endif
+
+/* int16 */
+
+typedef signed short int16 ;
+typedef unsigned short uint16;
+
+/* int8 */
+#ifdef _CHAR_IS_SIGNED
+typedef char int8;
+#else
+typedef signed char int8;
+#endif
+typedef unsigned char uint8;
+
+#endif
+
+typedef unsigned long count_t; /* biggest thing a pointer can access */
+/* size_t from stdlib.h included in defs.h */
+
+#ifndef NULL
+#define NULL 0
+#endif

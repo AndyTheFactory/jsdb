@@ -1,0 +1,261 @@
+CC = @CC@
+AR = @XAR@ rv
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+bindir=/usr/local/bin
+bindir=@bindir@
+ID_RS=-idirafter rs
+ID_JS=-idirafter js
+ID_FDM=-idirafter js/fdlibm -DJSFILE -D_IEEE_LIBM
+ID_ELINE=-idirafter js/editline -DJSFILE -DANSI_ARROWS -DHAVE_TCGETATTR -DHIDE -DUSE_DIRENT -DSYS_UNIX -DHAVE_STDLIB -DUNIQUE_HISTORY
+ID_ZLIB=-idirafter zlib
+FORCE_STATIC_LIB = 1
+FORCE_USE_PIC = 1
+
+VERSION=1.2
+CFLAGS = @CFLAGS@ @DEFS@
+LDFLAGS = @LDFLAGS@
+LIBS = @LIBS@
+
+
+#OBJ = obj/gcc/jsdb.o obj/gcc/adler32.o obj/gcc/trees.o obj/gcc/zutil.o obj/gcc/deflate.o obj/gcc/infblock.o obj/gcc/infcodes.o obj/gcc/inffast.o obj/gcc/inflate.o obj/gcc/inftrees.o obj/gcc/infutil.o obj/gcc/wrap_process.o obj/gcc/wrap_com.o obj/gcc/wrap_debug.o obj/gcc/wrap_env.o obj/gcc/wrap_form.o obj/gcc/wrap_image.o obj/gcc/wrap_index.o obj/gcc/wrap_mail.o obj/gcc/wrap_odbc.o obj/gcc/wrap_record.o obj/gcc/wrap_server.o obj/gcc/wrap_shell.o obj/gcc/wrap_shell2.o obj/gcc/wrap_stream.o obj/gcc/wrap_table.o obj/gcc/wrap_zip.o obj/gcc/dbf_cache.o obj/gcc/dbf_dat.o obj/gcc/dbf_file.o obj/gcc/dbf_head.o obj/gcc/dbf_io.o obj/gcc/dbf_open.o obj/gcc/dbf_rec.o obj/gcc/ezf_form.o obj/gcc/ezf_read.o obj/gcc/ezf_writ.o obj/gcc/gif_font.o obj/gcc/gif_main.o obj/gcc/io_b64.o obj/gcc/io_comm.o obj/gcc/io_compress.o obj/gcc/io_expand.o obj/gcc/io_ezf.o obj/gcc/io_file.o obj/gcc/io_inet.o obj/gcc/io_list.o obj/gcc/io_memory.o obj/gcc/io_open.o obj/gcc/io_pipe.o obj/gcc/io_print.o obj/gcc/io_stream.o obj/gcc/io_xml.o obj/gcc/io_zip.o obj/gcc/ml_list.o obj/gcc/ml_mapi.o obj/gcc/ml_mapi2.o obj/gcc/ml_mime.o obj/gcc/ml_notes.o obj/gcc/ml_open.o obj/gcc/ml_pop.o obj/gcc/ml_vim.o obj/gcc/sy_alloc.o obj/gcc/sy_char.o obj/gcc/sy_crc.o obj/gcc/sy_except.o obj/gcc/sy_file.o obj/gcc/sy_form.o obj/gcc/sy_int32.o obj/gcc/sy_list.o obj/gcc/sy_mswin.o obj/gcc/sy_param.o obj/gcc/sy_sort.o obj/gcc/sy_sql.o obj/gcc/sy_string.o obj/gcc/sy_strlist.o obj/gcc/sy_time.o obj/gcc/sy_url.o obj/gcc/sy_worm.o obj/gcc/tbl_asci.o obj/gcc/tbl_cache.o obj/gcc/tbl_data.o obj/gcc/tbl_dbf.o obj/gcc/tbl_index.o obj/gcc/tbl_main.o obj/gcc/tbl_sql.o obj/gcc/jsapi.o obj/gcc/jsarena.o obj/gcc/jsarray.o obj/gcc/jsatom.o obj/gcc/jsbool.o obj/gcc/jscntxt.o obj/gcc/jsdate.o obj/gcc/jsdbgapi.o obj/gcc/jsdhash.o obj/gcc/jsdtoa.o obj/gcc/jsemit.o obj/gcc/jsexn.o obj/gcc/jsfun.o obj/gcc/jsgc.o obj/gcc/jshash.o obj/gcc/jsinterp.o obj/gcc/jslog2.o obj/gcc/jslong.o obj/gcc/jsmath.o obj/gcc/jsnum.o obj/gcc/jsobj.o obj/gcc/jsopcode.o obj/gcc/jsparse.o obj/gcc/jsprf.o obj/gcc/jsregexp.o obj/gcc/jsscan.o obj/gcc/jsscope.o obj/gcc/jsscript.o obj/gcc/jsstr.o obj/gcc/jsxdrapi.o obj/gcc/jsxml.o obj/gcc/prmjtime.o
+OBJ = obj/gcc/jsdb.o obj/gcc/gettickcount.o obj/gcc/adler32.o obj/gcc/trees.o obj/gcc/zutil.o obj/gcc/deflate.o obj/gcc/infblock.o obj/gcc/infcodes.o obj/gcc/inffast.o obj/gcc/inflate.o obj/gcc/inftrees.o obj/gcc/infutil.o obj/gcc/wrap_process.o obj/gcc/wrap_com.o obj/gcc/wrap_debug.o obj/gcc/wrap_env.o obj/gcc/wrap_form.o obj/gcc/wrap_image.o obj/gcc/wrap_index.o obj/gcc/wrap_mail.o obj/gcc/wrap_odbc.o obj/gcc/wrap_record.o obj/gcc/wrap_server.o obj/gcc/wrap_shell.o obj/gcc/wrap_shell2.o obj/gcc/wrap_stream.o obj/gcc/wrap_table.o obj/gcc/wrap_zip.o obj/gcc/dbf_cache.o obj/gcc/dbf_dat.o obj/gcc/dbf_file.o obj/gcc/dbf_head.o obj/gcc/dbf_io.o obj/gcc/dbf_open.o obj/gcc/dbf_rec.o obj/gcc/ezf_form.o obj/gcc/ezf_read.o obj/gcc/ezf_writ.o obj/gcc/gif_font.o obj/gcc/gif_main.o obj/gcc/io_b64.o obj/gcc/io_comm.o obj/gcc/io_compress.o obj/gcc/io_expand.o obj/gcc/io_ezf.o obj/gcc/io_file.o obj/gcc/io_inet.o obj/gcc/io_list.o obj/gcc/io_memory.o obj/gcc/io_open.o obj/gcc/io_pipe.o obj/gcc/io_print.o obj/gcc/io_stream.o obj/gcc/io_xml.o obj/gcc/io_zip.o obj/gcc/ml_mime.o obj/gcc/ml_open.o obj/gcc/ml_pop.o obj/gcc/sy_alloc.o obj/gcc/sy_char.o obj/gcc/sy_crc.o obj/gcc/sy_except.o obj/gcc/sy_file.o obj/gcc/sy_form.o obj/gcc/sy_int32.o obj/gcc/sy_list.o obj/gcc/sy_mswin.o obj/gcc/sy_param.o obj/gcc/sy_sort.o obj/gcc/sy_string.o obj/gcc/sy_strlist.o obj/gcc/sy_time.o obj/gcc/sy_url.o obj/gcc/sy_worm.o obj/gcc/tbl_asci.o obj/gcc/tbl_cache.o obj/gcc/tbl_data.o obj/gcc/tbl_dbf.o obj/gcc/tbl_index.o obj/gcc/tbl_main.o obj/gcc/jsapi.o obj/gcc/jsarena.o obj/gcc/jsarray.o obj/gcc/jsatom.o obj/gcc/jsbool.o obj/gcc/jscntxt.o obj/gcc/jsdate.o obj/gcc/jsdbgapi.o obj/gcc/jsdhash.o obj/gcc/jsdtoa.o obj/gcc/jsemit.o obj/gcc/jsexn.o obj/gcc/jsfun.o obj/gcc/jsgc.o obj/gcc/jshash.o obj/gcc/jsinterp.o obj/gcc/jslog2.o obj/gcc/jslong.o obj/gcc/jsmath.o obj/gcc/jsnum.o obj/gcc/jsobj.o obj/gcc/jsopcode.o obj/gcc/jsparse.o obj/gcc/jsprf.o obj/gcc/jsregexp.o obj/gcc/jsscan.o obj/gcc/jsscope.o obj/gcc/jsscript.o obj/gcc/jsstr.o obj/gcc/jsxdrapi.o obj/gcc/jsxml.o obj/gcc/prmjtime.o obj/gcc/sy_sql.o obj/gcc/tbl_sql.o
+
+default: jsdbc fzlib wrap frs ffdm ffdma fline fjs jsdb
+
+jsdbc: 
+#	$(CC) $(CFLAGS) $(ID_JS) $(ID_RS) -oobj/gcc/gettickcount.o gettickcount.c
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_RS) -oobj/gcc/jsdb.o jsdb.cpp
+
+fzlib:
+	$(CC) $(CFLAGS) $(ID_ZLIB) -oobj/gcc/adler32.o zlib/adler32.c
+	$(CC) $(CFLAGS) $(ID_ZLIB) -oobj/gcc/trees.o zlib/trees.c
+	$(CC) $(CFLAGS) $(ID_ZLIB) -oobj/gcc/zutil.o zlib/zutil.c
+	$(CC) $(CFLAGS) $(ID_ZLIB) -oobj/gcc/deflate.o zlib/deflate.c
+	$(CC) $(CFLAGS) $(ID_ZLIB) -oobj/gcc/infblock.o zlib/infblock.c
+	$(CC) $(CFLAGS) $(ID_ZLIB) -oobj/gcc/infcodes.o zlib/infcodes.c
+	$(CC) $(CFLAGS) $(ID_ZLIB) -oobj/gcc/inffast.o zlib/inffast.c
+	$(CC) $(CFLAGS) $(ID_ZLIB) -oobj/gcc/inflate.o zlib/inflate.c
+	$(CC) $(CFLAGS) $(ID_ZLIB) -oobj/gcc/inftrees.o zlib/inftrees.c
+	$(CC) $(CFLAGS) $(ID_ZLIB) -oobj/gcc/infutil.o zlib/infutil.c
+
+wrap:
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_RS) -oobj/gcc/wrap_process.o rs/wrap_process.cpp
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_RS) -oobj/gcc/wrap_com.o rs/wrap_com.cpp
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_RS) -oobj/gcc/wrap_debug.o rs/wrap_debug.cpp
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_RS) -oobj/gcc/wrap_env.o rs/wrap_env.cpp
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_RS) -oobj/gcc/wrap_form.o rs/wrap_form.cpp
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_RS) -oobj/gcc/wrap_image.o rs/wrap_image.cpp
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_RS) -oobj/gcc/wrap_index.o rs/wrap_index.cpp
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_RS) -oobj/gcc/wrap_mail.o rs/wrap_mail.cpp
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_RS) -oobj/gcc/wrap_odbc.o rs/wrap_odbc.cpp
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_RS) -oobj/gcc/wrap_record.o rs/wrap_record.cpp
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_RS) -oobj/gcc/wrap_server.o rs/wrap_server.cpp
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_RS) -oobj/gcc/wrap_shell.o rs/wrap_shell.cpp
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_RS) -oobj/gcc/wrap_shell2.o rs/wrap_shell2.cpp
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_RS) -oobj/gcc/wrap_stream.o rs/wrap_stream.cpp
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_RS) -oobj/gcc/wrap_table.o rs/wrap_table.cpp
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_RS) -oobj/gcc/wrap_zip.o rs/wrap_zip.cpp
+
+frs:
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/dbf_cache.o rs/dbf_cache.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/dbf_dat.o rs/dbf_dat.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/dbf_file.o rs/dbf_file.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/dbf_head.o rs/dbf_head.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/dbf_io.o rs/dbf_io.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/dbf_open.o rs/dbf_open.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/dbf_rec.o rs/dbf_rec.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/ezf_form.o rs/ezf_form.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/ezf_read.o rs/ezf_read.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/ezf_writ.o rs/ezf_writ.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/gif_font.o rs/gif_font.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/gif_main.o rs/gif_main.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/io_b64.o rs/io_b64.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/io_comm.o rs/io_comm.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/io_compress.o rs/io_compress.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/io_expand.o rs/io_expand.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/io_ezf.o rs/io_ezf.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/io_file.o rs/io_file.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/io_inet.o rs/io_inet.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/io_list.o rs/io_list.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/io_memory.o rs/io_memory.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/io_open.o rs/io_open.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/io_pipe.o rs/io_pipe.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/io_print.o rs/io_print.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/io_stream.o rs/io_stream.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/io_xml.o rs/io_xml.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/io_zip.o rs/io_zip.cpp
+#	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/ml_list.o rs/ml_list.cpp
+#	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/ml_mapi.o rs/ml_mapi.cpp
+#	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/ml_mapi2.o rs/ml_mapi2.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/ml_mime.o rs/ml_mime.cpp
+#	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/ml_notes.o rs/ml_notes.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/ml_open.o rs/ml_open.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/ml_pop.o rs/ml_pop.cpp
+#	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/ml_vim.o rs/ml_vim.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/sy_alloc.o rs/sy_alloc.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/sy_char.o rs/sy_char.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/sy_crc.o rs/sy_crc.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/sy_except.o rs/sy_except.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/sy_file.o rs/sy_file.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/sy_form.o rs/sy_form.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/sy_int32.o rs/sy_int32.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/sy_list.o rs/sy_list.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/sy_mswin.o rs/sy_mswin.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/sy_param.o rs/sy_param.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/sy_sort.o rs/sy_sort.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/sy_sql.o rs/sy_sql.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/sy_string.o rs/sy_string.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/sy_strlist.o rs/sy_strlist.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/sy_time.o rs/sy_time.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/sy_url.o rs/sy_url.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/sy_worm.o rs/sy_worm.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/tbl_asci.o rs/tbl_asci.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/tbl_cache.o rs/tbl_cache.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/tbl_data.o rs/tbl_data.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/tbl_dbf.o rs/tbl_dbf.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/tbl_index.o rs/tbl_index.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/tbl_main.o rs/tbl_main.cpp
+	$(CC) $(CFLAGS) $(ID_RS) -oobj/gcc/tbl_sql.o rs/tbl_sql.cpp
+
+ffdm:
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/k_standard.o js/fdlibm/k_standard.c
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/e_acos.o js/fdlibm/e_acos.c
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/e_acosh.o js/fdlibm/e_acosh.c
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/e_cosh.o js/fdlibm/e_cosh.c
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/e_asin.o js/fdlibm/e_asin.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/e_sinh.o js/fdlibm/e_sinh.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/e_atan2.o js/fdlibm/e_atan2.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/e_atanh.o js/fdlibm/e_atanh.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/e_hypot.o js/fdlibm/e_hypot.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/e_exp.o js/fdlibm/e_exp.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/e_fmod.o js/fdlibm/e_fmod.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/e_log.o js/fdlibm/e_log.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/e_log10.o js/fdlibm/e_log10.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/e_pow.o js/fdlibm/e_pow.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/e_rem_pio2.o js/fdlibm/e_rem_pio2.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/e_remainder.o js/fdlibm/e_remainder.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/e_scalb.o js/fdlibm/e_scalb.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/s_scalbn.o js/fdlibm/s_scalbn.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/e_sqrt.o js/fdlibm/e_sqrt.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/e_gamma.o js/fdlibm/e_gamma.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/e_gamma_r.o js/fdlibm/e_gamma_r.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/e_lgamma.o js/fdlibm/e_lgamma.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/e_lgamma_r.o js/fdlibm/e_lgamma_r.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/e_j0.o js/fdlibm/e_j0.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/e_j1.o js/fdlibm/e_j1.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/e_jn.o js/fdlibm/e_jn.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/k_cos.o js/fdlibm/k_cos.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/k_sin.o js/fdlibm/k_sin.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/k_rem_pio2.o js/fdlibm/k_rem_pio2.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/k_tan.o js/fdlibm/k_tan.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/s_atan.o js/fdlibm/s_atan.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/s_ceil.o js/fdlibm/s_ceil.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/s_copysign.o js/fdlibm/s_copysign.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/s_cos.o js/fdlibm/s_cos.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/s_fabs.o js/fdlibm/s_fabs.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/s_finite.o js/fdlibm/s_finite.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/s_floor.o js/fdlibm/s_floor.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/s_isnan.o js/fdlibm/s_isnan.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/s_lib_version.o js/fdlibm/s_lib_version.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/s_sin.o js/fdlibm/s_sin.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/s_tan.o js/fdlibm/s_tan.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/w_acos.o js/fdlibm/w_acos.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/w_cosh.o js/fdlibm/w_cosh.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/w_acosh.o js/fdlibm/w_acosh.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/w_asin.o js/fdlibm/w_asin.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/w_atan2.o js/fdlibm/w_atan2.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/w_atanh.o js/fdlibm/w_atanh.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/w_exp.o js/fdlibm/w_exp.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/w_fmod.o js/fdlibm/w_fmod.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/w_log.o js/fdlibm/w_log.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/w_log10.o js/fdlibm/w_log10.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/w_pow.o js/fdlibm/w_pow.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/w_sqrt.o js/fdlibm/w_sqrt.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/w_gamma.o js/fdlibm/w_gamma.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/w_gamma_r.o js/fdlibm/w_gamma_r.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/w_lgamma.o js/fdlibm/w_lgamma.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/w_lgamma_r.o js/fdlibm/w_lgamma_r.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/w_j0.o js/fdlibm/w_j0.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/w_j1.o js/fdlibm/w_j1.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/w_jn.o js/fdlibm/w_jn.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/w_hypot.o js/fdlibm/w_hypot.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/w_remainder.o js/fdlibm/w_remainder.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/w_scalb.o js/fdlibm/w_scalb.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/w_sinh.o js/fdlibm/w_sinh.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/s_asinh.o js/fdlibm/s_asinh.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/s_cbrt.o js/fdlibm/s_cbrt.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/s_erf.o js/fdlibm/s_erf.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/s_expm1.o js/fdlibm/s_expm1.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/s_frexp.o js/fdlibm/s_frexp.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/s_ilogb.o js/fdlibm/s_ilogb.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/s_ldexp.o js/fdlibm/s_ldexp.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/s_log1p.o js/fdlibm/s_log1p.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/s_logb.o js/fdlibm/s_logb.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/s_matherr.o js/fdlibm/s_matherr.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/s_modf.o js/fdlibm/s_modf.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/s_nextafter.o js/fdlibm/s_nextafter.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/s_rint.o js/fdlibm/s_rint.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/s_signgam.o js/fdlibm/s_signgam.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/s_significand.o js/fdlibm/s_significand.c 
+	$(CC) $(CFLAGS) $(ID_JS) $(ID_FDM) -oobj/gcc/s_tanh.o js/fdlibm/s_tanh.c 
+
+ffdma:
+	$(AR) obj/gcc/libfdm.a obj/gcc/k_standard.o obj/gcc/k_rem_pio2.o obj/gcc/k_cos.o obj/gcc/k_sin.o obj/gcc/k_tan.o obj/gcc/e_acos.o obj/gcc/e_acosh.o obj/gcc/e_asin.o obj/gcc/e_atan2.o obj/gcc/e_atanh.o obj/gcc/e_cosh.o obj/gcc/e_exp.o obj/gcc/e_fmod.o obj/gcc/e_gamma.o obj/gcc/e_gamma_r.o obj/gcc/e_hypot.o obj/gcc/e_j0.o obj/gcc/e_j1.o obj/gcc/e_jn.o obj/gcc/e_lgamma.o obj/gcc/e_lgamma_r.o obj/gcc/e_log.o obj/gcc/e_log10.o obj/gcc/e_pow.o obj/gcc/e_rem_pio2.o obj/gcc/e_remainder.o obj/gcc/e_scalb.o obj/gcc/e_sinh.o obj/gcc/e_sqrt.o obj/gcc/w_acos.o obj/gcc/w_acosh.o obj/gcc/w_asin.o obj/gcc/w_atan2.o obj/gcc/w_atanh.o obj/gcc/w_cosh.o obj/gcc/w_exp.o obj/gcc/w_fmod.o obj/gcc/w_gamma.o obj/gcc/w_gamma_r.o obj/gcc/w_hypot.o obj/gcc/w_j0.o obj/gcc/w_j1.o obj/gcc/w_jn.o obj/gcc/w_lgamma.o obj/gcc/w_lgamma_r.o obj/gcc/w_log.o obj/gcc/w_log10.o obj/gcc/w_pow.o obj/gcc/w_remainder.o obj/gcc/w_scalb.o obj/gcc/w_sinh.o obj/gcc/w_sqrt.o obj/gcc/s_asinh.o obj/gcc/s_atan.o obj/gcc/s_cbrt.o obj/gcc/s_ceil.o obj/gcc/s_copysign.o obj/gcc/s_cos.o obj/gcc/s_erf.o obj/gcc/s_expm1.o obj/gcc/s_fabs.o obj/gcc/s_finite.o obj/gcc/s_floor.o obj/gcc/s_frexp.o obj/gcc/s_ilogb.o obj/gcc/s_isnan.o obj/gcc/s_ldexp.o obj/gcc/s_lib_version.o obj/gcc/s_log1p.o obj/gcc/s_logb.o obj/gcc/s_matherr.o obj/gcc/s_modf.o obj/gcc/s_nextafter.o obj/gcc/s_rint.o obj/gcc/s_scalbn.o obj/gcc/s_signgam.o obj/gcc/s_significand.o obj/gcc/s_sin.o obj/gcc/s_tan.o obj/gcc/s_tanh.o
+
+fline:
+	$(CC) $(CFLAGS) $(ID_ELINE) -oobj/gcc/editline.o js/editline/editline.c 
+	$(CC) $(CFLAGS) $(ID_ELINE) -oobj/gcc/sysunix.o js/editline/sysunix.c 
+	$(AR) obj/gcc/libedit.a obj/gcc/editline.o obj/gcc/sysunix.o
+
+fjs:
+	$(CC) $(CFLAGS) $(ID_JS) -oobj/gcc/jsapi.o js/jsapi.c
+	$(CC) $(CFLAGS) $(ID_JS) -oobj/gcc/jsarena.o js/jsarena.c
+	$(CC) $(CFLAGS) $(ID_JS) -oobj/gcc/jsarray.o js/jsarray.c
+	$(CC) $(CFLAGS) $(ID_JS) -oobj/gcc/jsatom.o js/jsatom.c
+	$(CC) $(CFLAGS) $(ID_JS) -oobj/gcc/jsbool.o js/jsbool.c
+	$(CC) $(CFLAGS) $(ID_JS) -oobj/gcc/jscntxt.o js/jscntxt.c
+	$(CC) $(CFLAGS) $(ID_JS) -oobj/gcc/jsdate.o js/jsdate.c
+	$(CC) $(CFLAGS) $(ID_JS) -oobj/gcc/jsdbgapi.o js/jsdbgapi.c
+	$(CC) $(CFLAGS) $(ID_JS) -oobj/gcc/jsdhash.o js/jsdhash.c
+	$(CC) $(CFLAGS) $(ID_JS) -oobj/gcc/jsdtoa.o js/jsdtoa.c
+	$(CC) $(CFLAGS) $(ID_JS) -oobj/gcc/jsemit.o js/jsemit.c
+	$(CC) $(CFLAGS) $(ID_JS) -oobj/gcc/jsexn.o js/jsexn.c
+	$(CC) $(CFLAGS) $(ID_JS) -oobj/gcc/jsfun.o js/jsfun.c
+	$(CC) $(CFLAGS) $(ID_JS) -oobj/gcc/jsgc.o js/jsgc.c
+	$(CC) $(CFLAGS) $(ID_JS) -oobj/gcc/jshash.o js/jshash.c
+	$(CC) $(CFLAGS) $(ID_JS) -oobj/gcc/jsinterp.o js/jsinterp.c
+	$(CC) $(CFLAGS) $(ID_JS) -oobj/gcc/jslog2.o js/jslog2.c
+	$(CC) $(CFLAGS) $(ID_JS) -oobj/gcc/jslong.o js/jslong.c
+	$(CC) $(CFLAGS) $(ID_JS) -oobj/gcc/jsmath.o js/jsmath.c
+	$(CC) $(CFLAGS) $(ID_JS) -oobj/gcc/jsnum.o js/jsnum.c
+	$(CC) $(CFLAGS) $(ID_JS) -oobj/gcc/jsobj.o js/jsobj.c
+	$(CC) $(CFLAGS) $(ID_JS) -oobj/gcc/jsopcode.o js/jsopcode.c
+	$(CC) $(CFLAGS) $(ID_JS) -oobj/gcc/jsparse.o js/jsparse.c
+	$(CC) $(CFLAGS) $(ID_JS) -oobj/gcc/jsprf.o js/jsprf.c
+	$(CC) $(CFLAGS) $(ID_JS) -oobj/gcc/jsregexp.o js/jsregexp.c
+	$(CC) $(CFLAGS) $(ID_JS) -oobj/gcc/jsscan.o js/jsscan.c
+	$(CC) $(CFLAGS) $(ID_JS) -oobj/gcc/jsscope.o js/jsscope.c
+	$(CC) $(CFLAGS) $(ID_JS) -oobj/gcc/jsscript.o js/jsscript.c
+	$(CC) $(CFLAGS) $(ID_JS) -oobj/gcc/jsstr.o js/jsstr.c
+	$(CC) $(CFLAGS) $(ID_JS) -oobj/gcc/jsxdrapi.o js/jsxdrapi.c
+	$(CC) $(CFLAGS) $(ID_JS) -oobj/gcc/jsxml.o js/jsxml.c
+	$(CC) $(CFLAGS) $(ID_JS) -oobj/gcc/prmjtime.o js/prmjtime.c
+
+rdline:
+
+
+
+jsdb: 
+	$(CC) -s -o bin/jsdb $(OBJ) $(LDFLAGS) $(LIBS)
+
+
+install: 
+	install bin/jsdb $(bindir)
+
+clean:
+	rm -f obj/gcc/*.o obj/gcc/*.a bin/jsdb 
+
+msproper: clean
+	rm -f config.status config.log config.cache Makefile
+

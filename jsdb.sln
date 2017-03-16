@@ -1,0 +1,29 @@
+Microsoft Visual Studio Solution File, Format Version 8.00
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "jsdb", "jsdb.vcproj", "{8E5DA100-1AC7-418D-BED7-2C93FDB1CE34}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test", "..\test\test.vcproj", "{B2636E94-48B7-4550-AE81-6DD22B28B870}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfiguration) = preSolution
+		Debug = Debug
+		Release = Release
+	EndGlobalSection
+	GlobalSection(ProjectConfiguration) = postSolution
+		{8E5DA100-1AC7-418D-BED7-2C93FDB1CE34}.Debug.ActiveCfg = Debug|Win32
+		{8E5DA100-1AC7-418D-BED7-2C93FDB1CE34}.Debug.Build.0 = Debug|Win32
+		{8E5DA100-1AC7-418D-BED7-2C93FDB1CE34}.Release.ActiveCfg = Release|Win32
+		{8E5DA100-1AC7-418D-BED7-2C93FDB1CE34}.Release.Build.0 = Release|Win32
+		{B2636E94-48B7-4550-AE81-6DD22B28B870}.Debug.ActiveCfg = Debug|Win32
+		{B2636E94-48B7-4550-AE81-6DD22B28B870}.Debug.Build.0 = Debug|Win32
+		{B2636E94-48B7-4550-AE81-6DD22B28B870}.Release.ActiveCfg = Release|Win32
+		{B2636E94-48B7-4550-AE81-6DD22B28B870}.Release.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+	EndGlobalSection
+	GlobalSection(ExtensibilityAddIns) = postSolution
+	EndGlobalSection
+EndGlobal

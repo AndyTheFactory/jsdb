@@ -1,0 +1,453 @@
+#include "rslib.h"
+#pragma hdrstop
+
+#ifndef XP_WIN
+ #include <sys/types.h>
+ #include <dirent.h>
+ #include <fnmatch.h>
+#endif
+// filename manipulation functions
+
+#ifdef __MSC__
+#define setdisk _chdrive
+#define chdir _chdir
+#define mkdir _mkdir
+#define stat _stat
+#endif
+#ifdef XP_WIN
+#define BACKSLASH '\\'
+#define BACKSLASHs "\\"
+#define LBACKSLASHs L"\\"
+#else
+#include <sys/stat.h>
+#include <unistd.h>
+#define BACKSLASH '/'
+#define BACKSLASHs "/"
+#endif
+
+void FixFilename(char* s)
+{
+#ifdef XP_WIN
+       Replace(s, "/", '\\');
+#else
+       Replace(s, "\\", '/');
+#endif
+}
+
+bool ChangeDirectory(const char * newdir)
+{
+ if (!newdir) return false;
+#ifdef XP_WIN
+  return (SetCurrentDirectoryW(WStr(newdir)) != 0);
+#else
+  return (chdir(newdir)==0);
+#endif
+/* if (newdir[1] == ':')
+#ifdef __MSC__
+   _chdrive(1 + toupper(newdir[0]) - 'A');
+#else
+   setdisk(toupper(newdir[0]) - 'A');
+#endif
+ return (chdir(newdir) == 0);
+*/
+}
+
+
+bool FlCopyFile(const char* src,const char* dst)
+{
+ if (!src || !*src) return false; //  required
+ if (!dst || !*dst) return false; //  required
+ char buff[2048]; int rb=1;
+ FILE *FIN,*FOU;
+ FIN=fopen(src,"rb");
+ FOU=fopen(dst,"wb");
+ while (rb>0) {
+    rb=fread(buff,1,2048,FIN);
+    if(rb>0) fwrite(buff,1,rb,FOU);
+ }
+ fclose(FOU); fclose(FIN);
+ return true;
+}
+
+int FileAttributes(const char* filename)
+{
+ if (!filename || !*filename) return 0; //  required
+#ifdef XP_WIN
+ DWORD x = GetFileAttributesW(WStr(filename));
+ if (x == (DWORD)(-1) || (x&FILE_ATTRIBUTE_SYSTEM))
+  return 0;
+ if (x & FILE_ATTRIBUTE_READONLY) return 1; //read only
+ if (x & FILE_ATTRIBUTE_DIRECTORY) return 4; //directory
+ return 3; //read and write
+#else
+ struct stat mystat;
+ int x = stat(filename,&mystat);
+ if (x == -1)
+  return 0;
+ if (S_ISDIR(mystat.st_mode)) return 4; //directory
+ if (mystat.st_mode & S_IWRITE && mystat.st_mode & S_IREAD) return 3; //read and write only
+ if (mystat.st_mode & S_IWRITE ) return 2; //write only
+ if (mystat.st_mode & S_IREAD) return 1; //read only
+ return 0;
+#endif
+}
+
+/** NT always returns true for CreateFileW(...,OPEN_EXISTING), so we have to use
+the file attriutes first to check whether the file exists */
+bool FileExists(const char * filename)
+{
+ if (!filename || !*filename) return false; //  required
+#ifdef XP_WIN
+ DWORD attr = GetFileAttributesW(WStr(filename));
+// DWORD err = GetLastError();
+ if (attr == 0xFFFFFFFF) return false;
+ HANDLE f = CreateFileW(WStr(filename),0,FILE_SHARE_WRITE|FILE_SHARE_READ,0,OPEN_EXISTING,0,0);
+ if (f == INVALID_HANDLE_VALUE) return false;
+ CloseHandle(f);
+ return true;
+#else
+ struct stat mystat;
+ int x = stat(filename,&mystat);
+ if (x == -1)
+  return 0;
+  if (S_ISLNK(mystat.st_mode) || S_ISREG(mystat.st_mode)) return true;
+    else return false;
+#endif
+}
+
+void AddBackslash(char* temp)
+{
+if (*temp && temp[strlen(temp)-1] != BACKSLASH) strcat(temp,BACKSLASHs);
+}
+
+void AddBackslash(wchar_t* temp)
+{
+#ifdef XP_WIN
+ if (*temp && temp[wcslen(temp)-1] != BACKSLASH) wcscat(temp,LBACKSLASHs);
+#else
+ size_t i = 0;
+ while (temp[i]) i++;
+ if (i && temp[i-1] != BACKSLASH) temp[i] = BACKSLASH;
+#endif
+}
+
+void  MakeDirectoryExist(const char *DestDir)
+{
+ TStr s;
+#ifdef XP_WIN
+ if ((DestDir[0] == '\\' ||DestDir[0]=='/')
+     &&(DestDir[1] == '\\' ||DestDir[1]=='/')) // network drive
+      {
+       s = DestDir;
+       Replace(s, "/", '\\');
+       char * c = strchr(s+2,'\\');
+       if (!c) return;
+       *c = 0;
+       c ++;
+       DestDir = c;
+      }
+#endif
+ TStringList order(DestDir,"/\\");
+
+#ifdef XP_WIN
+ if (*s) AddBackslash(s);
+ FOREACH(char*c,order)
+   TStr p(s);
+   s += c;
+   if (*p)
+    CreateDirectoryExW(WStr(p),WStr(s),0);
+   else
+    CreateDirectoryW(WStr(s),0);
+   s += BACKSLASHs;
+ DONEFOREACH
+#else
+ if (DestDir[0] == '/') s = "/";
+ FOREACH(char*c,order)
+   s += c;
+   mkdir(s,0777);
+   s += BACKSLASHs;
+ DONEFOREACH
+#endif
+}
+
+void GetDirectory(const char * Filename,TStr& dir)
+{
+  if (*Filename == '\"') Filename++;
+  TStr Directory(Filename);
+
+  char * c = strrchr(Directory,BACKSLASH);
+  if (!c ) {dir=0; return;}
+
+  if (*c == BACKSLASH)
+	  *(++c) = 0;
+
+  dir.Exchange(Directory);
+}
+
+char * GetExtension(char * filename)
+{
+ size_t i,j,k;
+ if (!filename) return NULL;
+ k = strlen(filename);
+ if (!k) return filename;
+ j = k - 1;
+
+ while (j)
+ {
+  if (filename[j] == '.') return filename + j + 1;
+  if (strchr("\\/",filename[j])) break;
+  j--;
+ }
+ return filename + k; //returns a null string
+}
+
+char * GetFilename(char * filename)
+{
+ if (!filename) return NULL;
+ char * c = strrchr(filename,BACKSLASH);
+ if (!c) return filename;
+ return c+1;
+}
+
+char * ClipFilename(char * filename)
+{
+ if (!filename) return NULL;
+ char * c = strrchr(filename,BACKSLASH);
+ if (!c) return filename;
+ *c=0;
+
+ return c+1;
+}
+
+bool CreateTempFile(TStr& s,const char * ext)
+{
+  s.Resize(MAXPATH);
+#ifdef XP_WIN
+  TStr Temppath(MAXPATH);
+  GetTempPath(MAXPATH,Temppath);
+  if (!GetTempFileName(Temppath,"rs",0,s)) return false;
+  DeleteFile(s);
+#else
+  sprintf(s,"/tmp/%ld",GetTickCount());
+#endif
+  if (ext)
+   {
+    ClipExtension(s);
+    s += ".";
+    s += ext[0] == '.' ? ext+1 : ext;
+   }
+  return true;
+}
+
+bool GetNewFilename(const char * ext,const char * destdir,TStr& filename)
+{
+ TStr Dir(destdir);
+ AddBackslash(Dir);
+ MakeDirectoryExist(Dir);
+ if (!ext) ext = "";
+ int32 fn = 1;
+ while (fn < 99999999L)
+  {
+   char c[10];
+   itoa(fn,c,10);
+   TStr destfile(Dir,c,(*ext=='.')?"":".",ext);
+   if (!FileExists(destfile))
+    {
+     filename.Exchange(destfile); return true;
+    }
+   fn++;
+  }
+  filename=0;
+  return false;
+}
+
+long GetWildCardFileNames(const char * filespec, TStringList & strings)
+    { //  expand wild card to list of all file names
+ TStr Directory;
+ GetDirectory(filespec,Directory);
+ AddBackslash(Directory);
+#ifdef XP_WIN
+ WIN32_FIND_DATAW FileInfo;
+ HANDLE findhandle = FindFirstFileW(WStr(filespec),&FileInfo);
+
+ if (findhandle != INVALID_HANDLE_VALUE) do
+  {
+   TStr Filename(Directory,TStr((uint16*)FileInfo.cFileName));
+   strings.Add(Filename);
+  } while ( FindNextFileW(findhandle,&FileInfo) );
+
+ if (findhandle != INVALID_HANDLE_VALUE)
+  FindClose(findhandle);
+
+#else
+ TStr nfn(filespec);
+// swapchars(nfn,strlen(nfn),'\\','/');
+ filespec=nfn;
+
+ char* find = ClipFilename(nfn);
+
+
+ DIR* dirp = opendir(filespec);
+ if (!dirp)  return NOT_FOUND;
+
+ struct dirent* dp;
+ while ((dp = readdir(dirp)) != NULL)
+ {
+   if (fnmatch(find,dp->d_name,0) == 0)
+   {
+    TStr Filename(filespec,dp->d_name);
+    strings.Add(Filename);
+   }
+ }
+ closedir(dirp);
+ #endif
+return strings.Count();
+    }
+
+
+char * GetFileBackupName(const char * SrcFileName,TStr& BackupName)
+      {
+        if (!SrcFileName) return NULL;
+        char FileName[MAXPATH], OutFileName[MAXPATH];
+        strcpy(FileName,SrcFileName);
+        char * Temp = strrchr(FileName, '.');
+        if (Temp) Temp[1] = 0;
+
+        StrAdd(OutFileName,FileName,"1");
+        int SeqNum = 1;
+        while (FileExists(OutFileName))
+          {
+            char Temp[200]; SeqNum++;
+            StrAdd(OutFileName,FileName,itoa(SeqNum,Temp,10));
+          }
+       BackupName = OutFileName;
+       return BackupName;
+      }
+
+
+char * ClipExtension(char * filename)
+{
+ if (!filename) return NULL;
+ int j,k;
+ k = strlen(filename);
+ if (k == 0) return NULL;
+ j = k - 1;
+
+ while (j>=0)
+ {
+  if (filename[j] == '.')
+    {
+     filename[j] = 0;
+     return filename + j + 1;
+    }
+  if (strchr("\\/",filename[j])) //no extension
+   break;
+  j--;
+ }
+ return filename + k; //returns a null string
+}
+
+void FileMerge(TStr& filename,
+                                  char* drive, char* directory, char* title, char* ext)
+ {
+   filename = TStr(drive,directory,title,ext);
+ }
+
+
+void FileSplit(const char * filename,
+                                  char* drive, char* directory, char* title, char* ext)
+{
+ TStr s(filename);
+
+ char * bs = strrchr(s,BACKSLASH);
+ char * c = strrchr(s,'.');
+
+ if (bs && bs > c) c = 0;
+
+ if (c)
+  {
+   if (ext) {strcpy(ext,c);}
+   *c = 0;
+  }
+  else
+  {
+   if (ext) *ext = 0;
+  }
+
+ c = GetFilename(s);
+  if (title) {strcpy(title,c);}
+  *c=0;
+
+ c = strchr(s,':');
+ if (c)
+  {
+   c++; //  required
+   if (directory) strcpy(directory,c);
+   *c = 0;
+   if (drive) strcpy(drive,s);
+  }
+ else
+  {
+   if (directory) strcpy(directory,s);
+   if (drive) *drive=0;
+  }
+}
+
+// directory functions
+long  FileSize(const char * filename)
+   {
+         if (!filename || !*filename) return 0;
+#ifdef XP_WIN
+       DWORD attr = GetFileAttributesW(WStr(filename));
+       if (attr == 0xFFFFFFFF) return 0;
+         HANDLE f = CreateFileW(WStr(filename),0,FILE_SHARE_WRITE|FILE_SHARE_READ,0,OPEN_EXISTING,0,0);
+         if (f == INVALID_HANDLE_VALUE) return 0;
+         DWORD d =0;
+         d = GetFileSize(f,&d);
+         if (d == 0xffffff) if (GetLastError() != NO_ERROR) d = 0;
+         CloseHandle(f);
+         return d;
+#else
+     if (!FileExists(filename)) return 0;
+     struct stat StatBuf;
+     if (stat(filename, & StatBuf) == -1) return 0;  //  0 = valid file info
+     return StatBuf.st_size;
+#endif
+}
+
+void    WaitMilSec(uint32 MilSec)
+    {
+      uint32 StartTime = GetTickCount();
+      uint32 EndTime   = StartTime + MilSec;
+      if (EndTime < StartTime) return; // rollover zero?
+      while ( EndTime > GetTickCount());
+    }
+
+double  GetDiskFree(const char * FileName)
+{
+#ifdef XP_WIN
+        double float1;
+#ifdef __BORLANDC__
+         int I;
+        char Drive[MAXPATH];
+        fnsplit(FileName,Drive,NULL,NULL,NULL);
+         dfree disk;
+         I  = toupper(Drive[0]) - 64;  //  A: = 0  B: = 1
+         getdfree((unsigned char)I, & disk);
+
+        float1 = (double)disk.df_avail *  //  Clusters available
+                 (double)disk.df_bsec *   //  Bytes per sector
+                 (double)disk.df_sclus;   //  Sectors per Cluster
+#else
+ DWORD a,b,c,d;
+ if (!GetDiskFreeSpace(FileName,&a,&b,&c,&d)) return 0.0;
+ float1 = (double)a * (double)b * (double)c;
+#endif
+         return float1;
+#else
+ return INT_MAX;
+#endif
+}
+
+//file i/o utils copied out of sy_utils.cpp
+

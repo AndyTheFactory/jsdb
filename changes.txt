@@ -1,0 +1,58 @@
+The following changes have been made to SpiderMonkey 1.5:
+
+1. Add parenthesis around ambiguous shift operators.
+2. In jsobj.c, at the beginning of js_FindProperty(), insert
+     lastobj = obj = cx->fp->scopeChain;
+     if (obj) do {
+3. Disable __declspec(dllimport) in jstypes.h
+4. Replace JSLL_INIT macros in prmjtime.c and jslong.c 
+5. Add at the beginning of jsmath.c
+	double copysign(double a,double b)
+	 {
+	  if ((a > 0 && b < 0) || (a < 0 && b > 0)) return -a;
+	  return a;
+	 }
+	#define fd_copysign copysign
+	#define fd_atan2 atan2
+	#define fd_pow pow
+
+
+The following changes have been made to SpiderMonkey 1.6:
+
+1. Add parenthesis around ambiguous shift operators.
+2. Insert before jsobj.c#2966
+     lasbobj = obj = cx->fp->scopeChain;
+     if (obj) 
+3. Disable __declspec(dllimport) in jstypes.h
+4. Replace JSLL_INIT macros in prmjtime.c and jslong.c
+5. Add at the beginning of jsmath.c
+	#define fd_atan2 atan2
+	#define fd_pow pow
+6. Comment out JSTempValueRooter from jscntxt.h
+7. Replace winbase.h and wintypes.h in prmjtime.c with windows.h
+8. Delete "JS_INLINE" from declarations in jsgc.c
+
+The following changes have been made to SpiderMonkey 1.7:
+
+1. Add parenthesis around ambiguous shift operators.
+2. In jsobj.c, at the beginning of js_FindProperty(), insert
+     lastobj = obj = cx->fp->scopeChain;
+     if (obj) do {
+3. Disable __declspec(dllimport) by inserting
+	#  if defined(__MWERKS__) || defined(__GNUC__)
+	#    define JS_IMPORT_DATA(__x)      __x
+	#  else
+4. Add at the beginning of jsmath.c
+	double copysign(double a,double b)
+	 {
+	  if ((a > 0 && b < 0) || (a < 0 && b > 0)) return -a;
+	  return a;
+	 }
+	#define fd_copysign copysign
+	#define fd_atan2 atan2
+	#define fd_pow pow
+5. Rewrote jsapi.c, pending SpiderMonkey changes to match.
+
+The following changes have been made to SpiderMonkey 1.8:
+
+Included editline/* from SpiderMonkey 1.7.

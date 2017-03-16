@@ -1,0 +1,139 @@
+#include "rslib.h"
+#pragma hdrstop
+
+const char * HexToStr(char * Str, long * X, int Max)
+    {
+      Str[0] = 0;
+      char Temp[100];
+      for (int I = 0; I < Max; I++)
+          {
+            sprintf(Temp, "%x ", X[I]);
+            strcat(Str,Temp);
+          }
+      BStripB(Str);
+      return Str;
+    }
+
+int  StrToHex(const char * Str, long * X, int Max)
+    {
+      TStringList StrList(Str," ");
+      int Count = StrList.Count();
+
+      for (int I = 0; I < Max; I++)
+         {
+           if (I < Count)
+             X[I] = strtoul(StrList[I],0,16);
+           else
+             X[I] = 0;
+         }
+      return Count<Max?Count:Max;
+    }
+
+
+
+
+int CharToInt(char * Str)
+  {
+    int I;
+    int X = 0;
+    for (I = 3; I>= 0 ; I--)
+       {
+         X = (X << 8) + (unsigned char )Str[I];
+       }
+    return X;
+  }
+
+char * IntToChar(int X, char * Str)
+  {
+    Str[0] = (char)( X & 0xFF); X = X >> 8;
+    Str[1] = (char)( X & 0xFF); X = X >> 8;
+    Str[2] = (char)( X & 0xFF); X = X >> 8;
+    Str[3] = (char)( X & 0xFF);
+    return Str;
+  }
+
+char * IntToStr32(int X, char * Str)
+   {
+     const char Alpha[]="123456789abcdefghijkmnpqrstuvwxy";
+     int  J = 0;
+     int I;
+     while (X && J < 7)
+        {
+          I = X & 0x1F;
+          Str[J] = Alpha[I];
+          J++;
+          X = X >> 5;
+        }
+     Str[J] = 0;
+     return  Str;
+   }
+
+int Str32ToInt(const char * Str)
+   {
+     const char Alpha[]="123456789abcdefghijkmnpqrstuvwxy";
+     int X = 0;
+     int I, J;
+     char * Temp;
+     unsigned int K = 1;
+     J = 0;
+     for (I = 0; Str[I] && J < 7 ; I++)
+       {
+         if (K == 1 && Str[I] == ' ') continue; // leading blanks
+         Temp = strchr(Alpha, Str[I]);
+         if (!Temp) break;      // bad character
+         J++;
+         X += (Temp - Alpha) * K;
+         K *= 32;
+       }
+     return X;
+   }
+
+int  CompareStr32(const char * Str1, const char * Str2)
+   {
+     int I, Len1, Len2;
+     Len1 = strlen(Str1);
+     Len2 = strlen(Str2);
+     if (Len1 > Len2) return  1;
+     if (Len1 < Len2) return -1;
+     for (I = Len1 -1; I >= 0; I--)
+       {
+         if (Str1[I] > Str2[I]) return  1;
+         if (Str1[I] < Str2[I]) return -1;
+       }
+     return 0;
+   }
+
+
+
+char * MakeHashStr(char * buf, char * Str)
+   {
+     char Hash[20];
+     unsigned int  s1, s2, s3;
+     s1 = 0; s2 = 0; s3 = 0;
+     while (*buf)
+        {
+          s1 += *buf++;
+           s2 += s1;
+          s3 += s2;
+        }
+
+     Str[0] = 0;
+
+     IntToStr32(s1, Hash);
+     strcat(Hash,"11111");  // pad it
+     Hash[3] = 0;
+     strcat(Str, Hash);
+     IntToStr32(s2, Hash);
+     strcat(Hash,"11111");
+     Hash[3] = 0;
+     strcat(Str, Hash);
+     IntToStr32(s3, Hash);
+     strcat(Hash,"11111");
+     Hash[4] = 0;
+     strcat(Str, Hash);
+     return Str;
+   }
+
+
+
+
